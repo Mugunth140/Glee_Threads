@@ -1,4 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Glee Threads - T-Shirt E-commerce Application
+
+A modern t-shirt e-commerce application built with Next.js 16, React 19, TypeScript, and Tailwind CSS.
+
+## Features
+
+- 🛍️ Premium t-shirt catalog
+- 🎨 Custom t-shirt design options
+- 🛒 Shopping cart functionality
+- 📱 Fully responsive design
+- ⚡ Fast performance with Next.js App Router
+- 🎨 Beautiful black & white UI with Tailwind CSS
+- 🔍 Product search functionality
+- 👔 Size selection (S, M, L, XL, XXL)
+- 🏪 Admin panel for product management
+- 🇮🇳 Indian localization (₹, GST, UPI, COD)
+
+## Tech Stack
+
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS 4
+- **UI Components:** React 19
+- **Icons:** Custom SVG icons
 
 ## Getting Started
 
@@ -10,15 +33,31 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+Ecommerce/
+├── src/
+│   ├── app/                  # Next.js app router pages
+│   │   ├── cart/            # Shopping cart page
+│   │   ├── products/        # Products listing page
+│   │   ├── layout.tsx       # Root layout
+│   │   └── page.tsx         # Home page
+│   ├── components/          # Reusable components
+│   │   ├── Navbar.tsx       # Navigation bar
+│   │   ├── Footer.tsx       # Footer component
+│   │   └── ProductCard.tsx  # Product card component
+│   ├── lib/                 # Utilities and data
+│   │   └── products.ts      # Product data
+│   └── types/               # TypeScript types
+│       └── product.ts       # Product type definitions
+├── public/                  # Static assets
+└── package.json
+```
 
 ## Learn More
 
@@ -26,8 +65,6 @@ To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 

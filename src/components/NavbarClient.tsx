@@ -1,0 +1,207 @@
+'use client';
+
+import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+export default function NavbarClient() {
+  const [showCategories, setShowCategories] = useState(false);
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cartCount, setCartCount] = useState(0);
+  const { user, logout, token } = useAuth();
+
+  const categories = ['Custom T-Shirts', 'Graphic Tees', 'Plain Tees', 'Premium', 'Sale'];
+  const newProducts = ['New Arrivals', 'Best Sellers', 'Limited Edition'];
+
+  // Fetch cart count
+  useEffect(() => {
+    async function fetchCartCount() {
+      if (!user || !token) {
+        setCartCount(0);
+        return;
+      }
+      try {
+        const response = await fetch('/api/cart', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const count = data.items?.reduce((acc: number, item: { quantity: number }) => acc + item.quantity, 0) || 0;
+          setCartCount(count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch cart:', error);
+      }
+    }
+    fetchCartCount();
+  }, [user, token]);
+
+  return (
+    <nav className="bg-white sticky top-0 z-50">
+      {/* Top Bar */}
+      <div className="border-b border-gray-100">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Left - About, FAQs */}
+            <div className="flex items-center gap-6">
+              <Link href="/about" className="text-sm text-gray-700 hover:text-black transition-colors">
+                About
+              </Link>
+              <Link href="/faqs" className="text-sm text-gray-700 hover:text-black transition-colors">
+                FAQs
+              </Link>
+            </div>
+
+            {/* Center - Logo */}
+            <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full overflow-hidden relative">
+                <Image src="/glee_logo.png" alt="Glee Threads" fill className="object-cover" />
+              </div>
+              <span className="text-xl font-semibold text-black">Glee Threads</span>
+            </Link>
+
+            {/* Right - Cart & Sign In */}
+            <div className="flex items-center gap-4">
+              {/* Cart Icon with Badge */}
+              <Link href="/cart" className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-xs font-medium rounded-full flex items-center justify-center">
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Sign In / User Menu */}
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <Link href="/profile" className="p-2 bg-gray-50 transition-colors rounded-full">
+                    <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black transition-colors bg-gray-50 border border-gray-400/15 hover:border-gray-500/45 rounded-3xl"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  className="px-5 py-2 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors"
+                >
+                  Sign In
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary Navigation Bar */}
+      <div className="border-b border-gray-100">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex items-center justify-between h-14 gap-4">
+            {/* Left - Dropdowns */}
+            <div className="flex items-center gap-4">
+              {/* Categories Dropdown */}
+              <div className="relative">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  onClick={() => {
+                    setShowCategories(!showCategories);
+                    setShowNewProduct(false);
+                  }}
+                >
+                  Categories
+                  <svg className={`w-4 h-4 transition-transform ${showCategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showCategories && (
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50">
+                    {categories.map((cat) => (
+                      <Link
+                        key={cat}
+                        href={`/products?category=${cat.toLowerCase()}`}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors"
+                        onClick={() => setShowCategories(false)}
+                      >
+                        {cat}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* New Product Dropdown */}
+              <div className="relative hidden md:block">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  onClick={() => {
+                    setShowNewProduct(!showNewProduct);
+                    setShowCategories(false);
+                  }}
+                >
+                  New Product
+                  <svg className={`w-4 h-4 transition-transform ${showNewProduct ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showNewProduct && (
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50">
+                    {newProducts.map((item) => (
+                      <Link
+                        key={item}
+                        href={`/products?sort=${item.toLowerCase().replace(' ', '-')}`}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors"
+                        onClick={() => setShowNewProduct(false)}
+                      >
+                        {item}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Center - Search Bar */}
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Right - Filter Pills */}
+            <div className="hidden lg:flex items-center gap-2">
+              {['Graphic', 'Plain', 'Oversized', 'Custom'].map((filter) => (
+                <Link
+                  key={filter}
+                  href={`/products?filter=${filter.toLowerCase()}`}
+                  className="px-5 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-full hover:border-black/30 hover:text-black transition-all"
+                >
+                  {filter}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
