@@ -151,7 +151,7 @@ export default function AdminDashboard() {
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
         <div className="relative">
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome to Glee Threads Admin</h1>
-          <p className="text-gray-500 max-w-xl">
+          <p className="text-white/80 max-w-xl">
             Manage your t-shirt store, track orders, and customize your website all from one place.
           </p>
           <div className="flex flex-wrap gap-3 mt-6">
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
             </Link>
             <Link
               href="/admin/orders"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 text-black rounded-xl text-sm font-medium hover:bg-white/20 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 text-white border border-white/15 rounded-xl text-sm font-medium hover:bg-white/20 hover:border-white/25 transition-colors"
             >
               View Orders
             </Link>

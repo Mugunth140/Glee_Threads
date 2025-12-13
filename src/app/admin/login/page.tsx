@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -48,13 +49,17 @@ export default function AdminLoginPage() {
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-white/5 rounded-full" />
         </div>
         <div className="relative z-10 flex flex-col justify-center px-16">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center">
-              <span className="text-black font-bold text-2xl">G</span>
-            </div>
+          <div className="flex items-center gap-2 mb-8">
+            <Image 
+              src="/glee_logo.png" 
+              alt="Glee Logo" 
+              width={32} 
+              height={32}
+              className="object-contain"
+            />
             <div>
-              <span className="text-2xl font-bold text-black">Glee Threads</span>
-              <p className="text-gray-500 text-sm">Admin Dashboard</p>
+              <span className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
+              <p className="text-gray-400 text-sm">Admin Dashboard</p>
             </div>
           </div>
           <h1 className="text-4xl font-bold text-black mb-4 leading-tight">
@@ -68,11 +73,15 @@ export default function AdminLoginPage() {
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
-          <div className="flex items-center justify-center gap-3 mb-10 lg:hidden">
-            <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
-              <span className="text-black font-bold text-xl">G</span>
-            </div>
-            <span className="text-xl font-semibold text-black">Glee Threads</span>
+          <div className="flex items-center justify-center gap-1 mb-10 lg:hidden">
+            <Image 
+              src="/glee_logo.png" 
+              alt="Glee Logo" 
+              width={32} 
+              height={32}
+              className="object-contain"
+            />
+            <span className="text-3xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
           </div>
 
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">

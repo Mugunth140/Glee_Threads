@@ -2,11 +2,17 @@ import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Figtree, Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
+});
+
+const figtree = Figtree({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-figtree",
 });
 
 export const metadata: Metadata = {
@@ -21,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} flex flex-col min-h-screen`}>
+      <body className={`${inter.className} ${figtree.variable} flex flex-col min-h-screen`}>
         <AuthProvider>
           <Navbar />
           <main className="grow">

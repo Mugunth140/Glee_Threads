@@ -108,7 +108,7 @@ export default function AdminOrdersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold">Orders</h1>
+        {/* <h1 className="text-2xl font-bold text-black/80">Orders</h1> */}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}

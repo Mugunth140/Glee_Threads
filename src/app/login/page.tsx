@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -35,11 +36,15 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           {/* Logo */}
-          <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">G</span>
-            </div>
-            <span className="text-xl font-semibold text-black">Glee Threads</span>
+          <Link href="/" className="flex items-center justify-center gap-0.5 mb-5">
+            <Image 
+              src="/glee_logo.png" 
+              alt="Glee Logo" 
+              width={24} 
+              height={24}
+              className="object-contain"
+            />
+            <span className="text-3xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
           </Link>
 
           {/* Header */}

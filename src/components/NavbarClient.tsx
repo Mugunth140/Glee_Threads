@@ -55,11 +55,15 @@ export default function NavbarClient() {
             </div>
 
             {/* Center - Logo */}
-            <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full overflow-hidden relative">
-                <Image src="/glee_logo.png" alt="Glee Threads" fill className="object-cover" />
-              </div>
-              <span className="text-xl font-semibold text-black">Glee Threads</span>
+            <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center gap-0.5">
+              <Image 
+                src="/glee_logo.png" 
+                alt="Glee Logo" 
+                width={24} 
+                height={24}
+                className="object-contain"
+              />
+              <span className="text-3xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
             </Link>
 
             {/* Right - Cart & Sign In */}

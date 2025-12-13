@@ -142,7 +142,7 @@ export default function AdminCategoriesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold">Categories</h1>
+        {/* <h1 className="text-2xl font-bold text-black/80">Categories</h1> */}
         <button
           onClick={() => openModal()}
           className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-xl font-medium hover:bg-gray-800 transition-colors"

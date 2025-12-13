@@ -190,7 +190,7 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Site Settings</h1>
+      {/* <h1 className="text-2xl font-bold text-black/80">Site Settings</h1> */}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-100">
@@ -221,7 +221,7 @@ export default function AdminSettingsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Featured Products</h2>
+              {/* <h2 className="text-lg font-semibold text-black/70">Featured Products</h2> */}
               <p className="text-sm text-gray-500">
                 These products will appear in the homepage carousel and featured section
               </p>
@@ -322,7 +322,7 @@ export default function AdminSettingsPage() {
       {activeTab === 'general' && (
         <div className="space-y-6">
           <div className="bg-white border border-gray-100 rounded-lg p-6 space-y-6">
-            <h2 className="text-lg font-semibold">Homepage Hero Section</h2>
+            <h2 className="text-lg font-semibold text-black/80">Homepage Hero Section</h2>
             
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">
@@ -365,7 +365,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="bg-white border border-gray-100 rounded-lg p-6 space-y-6">
-            <h2 className="text-lg font-semibold">Footer</h2>
+            <h2 className="text-lg font-semibold text-black/80">Footer</h2>
             
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">

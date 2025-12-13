@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 interface AdminUser {
   id: number;
@@ -47,8 +47,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = getStoredAuth();
-    setAuthState(stored);
-    setIsLoading(false);
+    startTransition(() => {
+      setAuthState(stored);
+      setIsLoading(false);
+    });
   }, []);
 
   const logout = useCallback(() => {

@@ -129,33 +129,36 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden fixed inset-0 z-[100]">
+    <div className="h-screen bg-gray-50 flex overflow-hidden fixed inset-0 z-100">
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-[110] lg:hidden"
+          className="fixed inset-0 bg-black/50 z-110 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-[120] w-64 ${!sidebarOpen && 'lg:w-20'} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} h-screen overflow-hidden`}
+        className={`fixed lg:static inset-y-0 left-0 z-120 w-64 ${!sidebarOpen && 'lg:w-20'} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} h-screen overflow-hidden`}
       >
         {/* Logo */}
         <div className="h-16 px-4 border-b border-gray-100 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden relative shrink-0">
-              <Image src="/glee_logo.png" alt="Glee Threads" fill className="object-cover" />
-            </div>
+          <Link href="/admin" className="flex items-center justify-center gap-0.5">
+            <Image 
+              src="/glee_logo.png" 
+              alt="Glee Logo" 
+              width={24} 
+              height={24}
+              className="object-contain shrink-0"
+            />
             <div className={`${!sidebarOpen && 'lg:hidden'}`}>
-              <span className="text-black font-semibold">Glee Threads</span>
-              <p className="text-xs text-gray-500">Admin Panel</p>
+              <span className="text-3xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
             </div>
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-gray-500 hover:text-black rounded-lg hover:bg-gray-100 transition-colors hidden lg:block"
+            className="p-2 text-gray-500 hover:text-black transition-colors hidden lg:block"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarOpen ? 'M11 19l-7-7 7-7m8 14l-7-7 7-7' : 'M13 5l7 7-7 7M5 5l7 7-7 7'} />

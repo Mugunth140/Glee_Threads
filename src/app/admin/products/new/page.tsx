@@ -43,7 +43,8 @@ export default function NewProductPage() {
       const res = await fetch('/api/categories');
       if (res.ok) {
         const data = await res.json();
-        setCategories(data.categories);
+        // API returns categories array directly, not wrapped in object
+        setCategories(Array.isArray(data) ? data : (data.categories || []));
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -102,7 +103,7 @@ export default function NewProductPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <h1 className="text-2xl font-bold">Add New Product</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -110,7 +111,7 @@ export default function NewProductPage() {
           {/* Left Column - Basic Info */}
           <div className="space-y-6">
             <div className="bg-white border border-gray-100 rounded-lg p-6 space-y-6">
-              <h2 className="text-lg font-semibold">Basic Information</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Basic Information</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-2">
@@ -167,7 +168,7 @@ export default function NewProductPage() {
                     className="w-full px-4 py-3 bg-white border border-gray-100 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black/10"
                   >
                     <option value="">Select category</option>
-                    {categories.map(cat => (
+                    {categories && categories.map(cat => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>
@@ -179,7 +180,7 @@ export default function NewProductPage() {
 
             {/* Inventory */}
             <div className="bg-white border border-gray-100 rounded-lg p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Inventory</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Inventory</h2>
               <p className="text-sm text-gray-500">Set stock quantity for each size</p>
               
               <div className="grid grid-cols-3 gap-3">
@@ -204,7 +205,7 @@ export default function NewProductPage() {
           {/* Right Column - Image */}
           <div className="space-y-6">
             <div className="bg-white border border-gray-100 rounded-lg p-6 space-y-6">
-              <h2 className="text-lg font-semibold">Product Image</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Product Image</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-2">
