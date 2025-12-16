@@ -1,38 +1,25 @@
 // This API route has been removed. End-user login is no longer supported.
+import { NextResponse } from 'next/server';
 
-    if (!isValid) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
-    }
+// End-user login has been removed. Return 410 Gone for all methods.
+export function GET() {
+  return NextResponse.json(
+    { error: 'Login disabled. End-user login is no longer supported.' },
+    { status: 410 }
+  );
+}
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      process.env.JWT_SECRET || 'your-jwt-secret',
-      { expiresIn: '7d' }
-    );
+export async function POST() {
+  return NextResponse.json(
+    { error: 'Login disabled. End-user login is no longer supported.' },
+    { status: 410 }
+  );
+}
 
-    // Return user data and token
-    return NextResponse.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+export function PUT() {
+  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
+}
+
+export function DELETE() {
+  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
 }
