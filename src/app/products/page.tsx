@@ -44,7 +44,13 @@ export default function ProductsPage() {
         : '/api/products';
       const response = await fetch(url);
       const data = await response.json();
-      setProducts(data);
+      // Only include products that are visible. If API provides `is_visible` use it,
+      // otherwise fall back to `is_active`.
+      const visible = (data as any[]).filter((p) => {
+        if (typeof p.is_visible !== 'undefined') return !!p.is_visible;
+        return !!p.is_active;
+      });
+      setProducts(visible);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -267,7 +273,7 @@ export default function ProductsPage() {
                     </span>
                     {product.sizes && product.sizes.length > 0 && (
                       <span className="text-xs text-gray-400">
-                        {product.sizes.filter(s => s.quantity > 0).length} sizes
+                        {product.sizes.length} sizes
                       </span>
                     )}
                   </div>

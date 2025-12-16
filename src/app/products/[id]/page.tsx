@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/contexts/AuthContext';
-import { Product, ProductSize } from '@/types/product';
+import { addToCart as addToAnonymousCart } from '@/lib/anonymousCart';
+import { showToast } from '@/lib/toast';
+import { Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
 import { use, useEffect, useState } from 'react';
@@ -20,31 +21,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const resolvedParams = use(params);
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
   const [showShipping, setShowShipping] = useState(true);
-  const { user, token } = useAuth();
+  // No auth required — use anonymous localStorage cart
 
   // Countdown timer for delivery
-  const [timeLeft, setTimeLeft] = useState({ hours: 2, minutes: 30, seconds: 25 });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Delivery timing removed per request
 
   const fetchProduct = async () => {
     try {
@@ -54,11 +40,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       }
       const data = await response.json();
       setProduct(data);
-      // Pre-select first available size
-      const firstAvailable = data.sizes?.find((s: ProductSize) => s.quantity > 0);
-      if (firstAvailable) {
-        setSelectedSize(firstAvailable.size_id);
+      // Pre-select first size if available
+      const firstSize = data.sizes?.[0];
+      if (firstSize) {
+        setSelectedSize(firstSize.size_id);
       }
+      // Pre-select first color if available
+      const firstColor = data.colors?.[0];
+      if (firstColor) setSelectedColor(firstColor);
     } catch (error) {
       console.error('Error fetching product:', error);
     } finally {
@@ -72,40 +61,33 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }, [resolvedParams.id]);
 
   const handleAddToCart = async () => {
-    if (!user || !token) {
-      alert('Please login to add items to cart');
+    if (!selectedSize) {
+      showToast('Please select a size', { type: 'error' });
       return;
     }
-
-    if (!selectedSize) {
-      alert('Please select a size');
+    if (product?.colors && product.colors.length > 0 && !selectedColor) {
+      showToast('Please select a color', { type: 'error' });
       return;
     }
 
     setAddingToCart(true);
     try {
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          product_id: product?.id,
-          size_id: selectedSize,
-          quantity: 1,
-        }),
+      // Use anonymous localStorage cart so users can add items without authentication
+      addToAnonymousCart({
+        product_id: product?.id || 0,
+        size_id: selectedSize,
+        size_name: selectedSizeInfo?.size_name || undefined,
+        quantity: 1,
+        color: selectedColor || undefined,
+        product: { id: product?.id || 0, name: product?.name, price: product?.price, image_url: product?.image_url },
       });
 
-      if (response.ok) {
-        alert('Added to cart successfully!');
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to add to cart');
-      }
+      // Optionally, attempt server-side add for authenticated users — skipped here.
+      showToast('Added to cart', { type: 'success' });
+      // Notify other windows/components by dispatching storage event already handled in helper
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Failed to add to cart');
+      showToast('Failed to add to cart', { type: 'error' });
     } finally {
       setAddingToCart(false);
     }
@@ -203,17 +185,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <p className="text-2xl font-semibold text-black">{formatPrice(Number(product.price))}</p>
             </div>
 
-            {/* Delivery Timer */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm text-gray-600">
-                Order in <span className="font-semibold text-black">
-                  {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-                </span> to get next day delivery
-              </span>
-            </div>
+            {/* Delivery timing removed */}
+
+            {/* Color Selection */}
+            {product.colors && product.colors.length > 0 && (
+              <div>
+                <p className="text-sm text-gray-600 mb-3">Choose Color</p>
+                <div className="flex items-center gap-3">
+                  {product.colors.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setSelectedColor(c)}
+                      aria-label={`Select color ${c}`}
+                      className={`w-9 h-9 rounded-full border-2 transition-all ${selectedColor === c ? 'border-black' : 'border-gray-200'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Size Selection */}
             <div>
@@ -223,31 +213,28 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     key={size.size_id}
                     onClick={() => setSelectedSize(size.size_id)}
-                    disabled={size.quantity === 0}
                     className={`min-w-14 px-5 py-3 rounded-full text-sm font-medium transition-all ${
                       selectedSize === size.size_id
                         ? 'bg-black text-white'
-                        : size.quantity > 0
-                        ? 'bg-gray-100 text-black hover:bg-gray-200'
-                        : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                        : 'bg-gray-100 text-black hover:bg-gray-200'
                     }`}
                   >
                     {size.size_name}
                   </button>
                 ))}
               </div>
-              {selectedSizeInfo && selectedSizeInfo.quantity < 5 && (
-                <p className="text-sm text-orange-600 mt-2">
-                  Only {selectedSizeInfo.quantity} left in stock
-                </p>
-              )}
+              {/* Stock/quantity display removed per request */}
             </div>
 
             {/* Add to Cart & Wishlist */}
             <div className="flex gap-3">
               <button
                 onClick={handleAddToCart}
-                disabled={!selectedSize || (selectedSizeInfo?.quantity || 0) === 0 || addingToCart}
+                disabled={
+                  // If the product has size variants, require a size to be selected
+                  (product.sizes && product.sizes.length > 0 && !selectedSize) ||
+                  addingToCart
+                }
                 className="flex-1 bg-black text-white py-4 rounded-full text-sm font-semibold hover:bg-gray-800 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {addingToCart ? 'Adding...' : 'Add to Cart'}

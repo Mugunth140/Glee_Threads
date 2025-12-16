@@ -40,11 +40,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               {product.sizes.slice(0, 4).map((size) => (
                 <span
                   key={size.size_id}
-                  className={`text-xs px-2 py-1 rounded ${
-                    size.quantity > 0
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-500'
-                  }`}
+                  className={`text-xs px-2 py-1 rounded bg-gray-100 text-gray-600`}
                 >
                   {size.size_name}
                 </span>

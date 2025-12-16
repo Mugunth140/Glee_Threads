@@ -12,6 +12,7 @@ export interface Product {
   created_at?: string;
   sizes?: ProductSize[];
   images?: ProductImage[];
+  colors?: string[];
 }
 
 export interface ProductSize {

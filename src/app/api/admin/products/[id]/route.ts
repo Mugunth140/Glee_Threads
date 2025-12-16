@@ -62,15 +62,32 @@ export async function GET(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    // Get inventory
+    // Get inventory (join sizes table to return size name)
     const [inventory] = await pool.query<RowDataPacket[]>(
-      'SELECT size, quantity FROM product_inventory WHERE product_id = ?',
+      `SELECT s.name as size, pi.quantity
+       FROM product_inventory pi
+       JOIN sizes s ON pi.size_id = s.id
+       WHERE pi.product_id = ?`,
       [id]
     );
 
+    // Get colors if table exists
+    let colors: string[] = [];
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(
+        'SELECT color_hex FROM product_colors WHERE product_id = ?',
+        [id]
+      );
+      colors = Array.isArray(rows) ? rows.map((r: any) => r.color_hex) : [];
+    } catch (e) {
+      // table might not exist yet
+      colors = [];
+    }
+
     return NextResponse.json({ 
       product: products[0],
-      inventory 
+      inventory,
+      colors
     });
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -91,7 +108,7 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { name, description, price, image_url, category_id, sizes } = body;
+    const { name, description, price, image_url, category_id, sizes, colors } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: 'Name, price, and category are required' }, { status: 400 });
@@ -112,12 +129,46 @@ export async function PUT(
       // Delete existing inventory
       await pool.query('DELETE FROM product_inventory WHERE product_id = ?', [id]);
       
-      // Insert new inventory
+      // Insert new inventory (sizes may be strings) — map to size_id
       for (const size of sizes) {
+        const sizeName = typeof size === 'string' ? size : (size.size || String(size));
+        // find or create size id
+        const [sizeRows] = await pool.query<any[]>('SELECT id FROM sizes WHERE name = ?', [sizeName]);
+        let sizeId: number | null = null;
+        if (Array.isArray(sizeRows) && sizeRows.length > 0) {
+          sizeId = sizeRows[0].id;
+        } else {
+          const [res] = await pool.query<ResultSetHeader>('INSERT INTO sizes (name) VALUES (?)', [sizeName]);
+          sizeId = res.insertId;
+        }
+        if (sizeId) {
+          await pool.query(
+            'INSERT INTO product_inventory (product_id, size_id, quantity) VALUES (?, ?, ?)',
+            [id, sizeId, 0]
+          );
+        }
+      }
+    }
+
+    // Update colors: recreate product_colors entries
+    if (Array.isArray(colors)) {
+      try {
         await pool.query(
-          'INSERT INTO product_inventory (product_id, size, quantity) VALUES (?, ?, ?)',
-          [id, size.size, size.quantity || 0]
+          `CREATE TABLE IF NOT EXISTS product_colors (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            product_id INT NOT NULL,
+            color_hex VARCHAR(12) NOT NULL,
+            CONSTRAINT fk_pc_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
         );
+        await pool.query('DELETE FROM product_colors WHERE product_id = ?', [id]);
+        for (const color of colors) {
+          const hex = String(color).trim();
+          if (!hex) continue;
+          await pool.query('INSERT INTO product_colors (product_id, color_hex) VALUES (?, ?)', [id, hex]);
+        }
+      } catch (e) {
+        console.error('Failed to save product colors', e);
       }
     }
 

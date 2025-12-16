@@ -1,9 +1,11 @@
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
-import { AuthProvider } from "@/contexts/AuthContext";
 import type { Metadata } from "next";
 import { Figtree, Inter } from "next/font/google";
 import "./globals.css";
+// Toasts is a client component; load it dynamically to avoid SSR issues
+// Toasts is a client component; import directly so Next can handle the client boundary
+import Toasts from '@/components/Toasts';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,13 +30,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} ${figtree.variable} flex flex-col min-h-screen`}>
-        <AuthProvider>
-          <Navbar />
-          <main className="grow">
-            {children}
-          </main>
-          <Footer />
-        </AuthProvider>
+        <Navbar />
+        {/* Global toast container (client) */}
+        <Toasts />
+        <main className="grow">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );

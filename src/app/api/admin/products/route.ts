@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, price, image_url, category_id, sizes } = body;
+    const { name, description, price, image_url, category_id, sizes, colors } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: 'Name, price, and category are required' }, { status: 400 });
@@ -83,13 +83,45 @@ export async function POST(request: NextRequest) {
 
     const productId = result.insertId;
 
-    // Insert inventory for each size
+    // Insert inventory for each size (sizes may be array of strings)
     if (sizes && Array.isArray(sizes)) {
       for (const size of sizes) {
-        await pool.query(
-          'INSERT INTO product_inventory (product_id, size, quantity) VALUES (?, ?, ?)',
-          [productId, size.size, size.quantity || 0]
-        );
+        const sizeName = typeof size === 'string' ? size : (size.size || String(size));
+        // find or create size id in sizes table
+        const [sizeRows] = await pool.query<any[]>('SELECT id FROM sizes WHERE name = ?', [sizeName]);
+        let sizeId: number | null = null;
+        if (Array.isArray(sizeRows) && sizeRows.length > 0) {
+          sizeId = sizeRows[0].id;
+        } else {
+          const [res] = await pool.query<ResultSetHeader>('INSERT INTO sizes (name) VALUES (?)', [sizeName]);
+          sizeId = res.insertId;
+        }
+
+        // default quantity 0 for new product when using size-only selection
+        if (sizeId) {
+          await pool.query(
+            'INSERT INTO product_inventory (product_id, size_id, quantity) VALUES (?, ?, ?)',
+            [productId, sizeId, 0]
+          );
+        }
+      }
+    }
+
+    // Store colors if provided. Create product_colors table if missing.
+    if (colors && Array.isArray(colors) && colors.length > 0) {
+      await pool.query(
+        `CREATE TABLE IF NOT EXISTS product_colors (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          product_id INT NOT NULL,
+          color_hex VARCHAR(12) NOT NULL,
+          CONSTRAINT fk_pc_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+      );
+
+      for (const color of colors) {
+        const hex = String(color).trim();
+        if (!hex) continue;
+        await pool.query('INSERT INTO product_colors (product_id, color_hex) VALUES (?, ?)', [productId, hex]);
       }
     }
 

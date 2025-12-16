@@ -50,10 +50,25 @@ export async function GET(
       [productId]
     );
 
+    // Get available colors (if any)
+    let colors: any[] = [];
+    try {
+      const [colorRows] = await pool.execute(
+        `SELECT color_hex FROM product_colors WHERE product_id = ?`,
+        [productId]
+      );
+      colors = Array.isArray(colorRows) ? (colorRows as any[]).map(r => r.color_hex) : [];
+    } catch (err) {
+      // If table doesn't exist or other error, ignore and continue without colors
+      console.warn('Could not fetch product colors:', err);
+      colors = [];
+    }
+
     return NextResponse.json({
       ...product,
       sizes,
       images,
+      colors,
     });
   } catch (error) {
     console.error('Error fetching product:', error);

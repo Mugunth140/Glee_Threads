@@ -25,9 +25,11 @@ export default function Home() {
     async function fetchProducts() {
       try {
         const response = await fetch('/api/products');
-        if (response.ok) {
+          if (response.ok) {
           const data = await response.json();
-          setFeaturedProducts(Array.isArray(data) ? data.slice(0, 8) : []);
+          const arr = Array.isArray(data) ? data : [];
+          const visible = arr.filter((p: any) => typeof p.is_visible !== 'undefined' ? !!p.is_visible : !!p.is_active);
+          setFeaturedProducts(visible.slice(0, 8));
         }
       } catch (error) {
         console.error('Failed to fetch products:', error);
@@ -69,7 +71,7 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/products"
-                  className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full text-sm font-semibold border border-gray-200 hover:border-black transition-all"
+                  className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full text-sm font-semibold border border-gray-200 hover:border-black/60 transition-all"
                 >
                   Shop Collection
                 </Link>
@@ -120,8 +122,8 @@ export default function Home() {
               </div>
 
               {/* Decorative Elements */}
-              <div className="absolute -top-4 -right-4 w-24 h-24 bg-black rounded-full opacity-5" />
-              <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-black rounded-full opacity-5" />
+              {/* <div className="absolute -top-4 -right-4 w-24 h-24 bg-black rounded-full opacity-5" />
+              <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-black rounded-full opacity-5" /> */}
             </div>
           </div>
         </div>
@@ -223,11 +225,7 @@ export default function Home() {
                         {product.sizes.slice(0, 4).map((size) => (
                           <span
                             key={size.size_id}
-                            className={`text-xs px-2 py-0.5 rounded ${
-                              size.quantity > 0
-                                ? 'bg-gray-100 text-gray-600'
-                                : 'bg-gray-50 text-gray-300 line-through'
-                            }`}
+                            className={`text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600`}
                           >
                             {size.size_name}
                           </span>
@@ -254,7 +252,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-semibold text-black mb-1">Free Shipping</h3>
-                <p className="text-sm text-gray-500">On orders over $100</p>
+                <p className="text-sm text-gray-500">On orders over Rs.1000</p>
               </div>
             </div>
             <div className="flex items-start gap-4 p-6 bg-white rounded-2xl">
@@ -293,7 +291,7 @@ export default function Home() {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-5 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                className="flex-1 px-5 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-black/50 text-black"
               />
               <button
                 type="submit"

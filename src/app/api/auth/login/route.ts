@@ -1,43 +1,4 @@
-import pool from '@/lib/db';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { NextRequest, NextResponse } from 'next/server';
-
-export async function POST(request: NextRequest) {
-  try {
-    const { email, password } = await request.json();
-
-    // Validation
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      );
-    }
-
-    // Find user
-    const [users] = await pool.execute(
-      'SELECT id, email, password_hash, name, role FROM users WHERE email = ?',
-      [email]
-    );
-
-    if (!Array.isArray(users) || users.length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
-    }
-
-    const user = users[0] as {
-      id: number;
-      email: string;
-      password_hash: string;
-      name: string;
-      role: string;
-    };
-
-    // Verify password
-    const isValid = await bcrypt.compare(password, user.password_hash);
+// This API route has been removed. End-user login is no longer supported.
 
     if (!isValid) {
       return NextResponse.json(

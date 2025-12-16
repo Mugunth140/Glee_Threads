@@ -43,34 +43,6 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <div className="hidden lg:flex lg:w-1/2 bg-black relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white/5 rounded-full" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white/5 rounded-full" />
-        </div>
-        <div className="relative z-10 flex flex-col justify-center px-16">
-          <div className="flex items-center gap-2 mb-8">
-            <Image 
-              src="/glee_logo.png" 
-              alt="Glee Logo" 
-              width={32} 
-              height={32}
-              className="object-contain"
-            />
-            <div>
-              <span className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
-              <p className="text-gray-400 text-sm">Admin Dashboard</p>
-            </div>
-          </div>
-          <h1 className="text-4xl font-bold text-black mb-4 leading-tight">
-            Manage your<br />t-shirt empire
-          </h1>
-          <p className="text-gray-500 text-lg max-w-md">
-            Control products, track orders, and customize your store.
-          </p>
-        </div>
-      </div>
-
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="flex items-center justify-center gap-1 mb-10 lg:hidden">

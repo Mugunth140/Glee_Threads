@@ -10,11 +10,6 @@ interface Category {
   name: string;
 }
 
-interface SizeInventory {
-  size: string;
-  quantity: number;
-}
-
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,9 +27,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     category_id: ''
   });
   
-  const [sizes, setSizes] = useState<SizeInventory[]>(
-    SIZES.map(size => ({ size, quantity: 0 }))
-  );
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
+  const [colorInput, setColorInput] = useState('');
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -57,11 +52,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           });
           
           // Map inventory to sizes
+          // Map inventory sizes to selectedSizes (inventory rows may exist)
           if (data.inventory && data.inventory.length > 0) {
-            setSizes(SIZES.map(size => {
-              const inv = data.inventory.find((i: SizeInventory) => i.size === size);
-              return { size, quantity: inv ? inv.quantity : 0 };
-            }));
+            const present = data.inventory.map((i: any) => i.size);
+            setSelectedSizes(SIZES.filter(s => present.includes(s)));
+          }
+
+          // Map colors
+          if (data.colors && Array.isArray(data.colors)) {
+            setColors(data.colors.map((c: any) => String(c)));
           }
         } else {
           alert('Product not found');
@@ -106,7 +105,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           ...formData,
           price: parseFloat(formData.price),
           category_id: parseInt(formData.category_id),
-          sizes: sizes.filter(s => s.quantity > 0)
+          sizes: selectedSizes,
+          colors: colors
         })
       });
 
@@ -124,11 +124,18 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const updateSize = (size: string, quantity: number) => {
-    setSizes(sizes.map(s => 
-      s.size === size ? { ...s, quantity: Math.max(0, quantity) } : s
-    ));
+  const toggleSize = (size: string) => {
+    setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
   };
+
+  const addColor = (raw: string) => {
+    const c = raw.trim();
+    if (!c) return;
+    setColors(prev => (prev.includes(c) ? prev : [...prev, c]));
+    setColorInput('');
+  };
+
+  const removeColor = (c: string) => setColors(prev => prev.filter(x => x !== c));
 
   if (loading) {
     return (
@@ -225,26 +232,56 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
 
-            {/* Inventory */}
+            {/* Options (sizes + colors) */}
             <div className="bg-white border border-gray-100 rounded-lg p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Inventory</h2>
-              <p className="text-sm text-gray-500">Set stock quantity for each size</p>
-              
-              <div className="grid grid-cols-3 gap-3">
-                {sizes.map(({ size, quantity }) => (
-                  <div key={size} className="bg-white border border-gray-100 rounded-lg p-3">
-                    <label className="block text-sm font-medium text-gray-500 mb-2 text-center">
+              <h2 className="text-lg font-semibold">Options</h2>
+              <p className="text-sm text-gray-500">Choose available sizes and edit color options</p>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Sizes</p>
+                <div className="flex flex-wrap gap-2">
+                  {SIZES.map((size) => (
+                    <label key={size} className={`px-3 py-1 rounded-full border ${selectedSizes.includes(size) ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-gray-200'}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSizes.includes(size)}
+                        onChange={() => toggleSize(size)}
+                        className="hidden"
+                      />
                       {size}
                     </label>
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => updateSize(size, parseInt(e.target.value) || 0)}
-                      min="0"
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-black text-center focus:outline-none focus:ring-2 focus:ring-black/10"
-                    />
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Colors</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={colorInput}
+                    onChange={(e) => setColorInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        addColor(colorInput);
+                      }
+                    }}
+                    placeholder="Add a color hex (e.g. #ff0000) and press Enter"
+                    className="px-3 py-2 border border-gray-200 rounded-lg w-full"
+                  />
+                  <button type="button" onClick={() => addColor(colorInput)} className="px-3 py-2 bg-black text-white rounded-lg">Add</button>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  {colors.map((c) => (
+                    <span key={c} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-sm">
+                      <span className="inline-block w-4 h-4 rounded-full" style={{ background: c }} />
+                      <span>{c}</span>
+                      <button type="button" onClick={() => removeColor(c)} className="text-gray-500 hover:text-gray-800">×</button>
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

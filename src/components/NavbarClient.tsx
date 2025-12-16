@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
+// import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -10,33 +10,33 @@ export default function NavbarClient() {
   const [showNewProduct, setShowNewProduct] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(0);
-  const { user, logout, token } = useAuth();
+
+  // Initialize cart count from anonymous localStorage cart and listen for changes
+  useEffect(() => {
+    function updateCount() {
+      try {
+        const raw = localStorage.getItem('glee_cart_v1');
+        if (!raw) return setCartCount(0);
+        const items = JSON.parse(raw) as Array<{ quantity?: number }>;
+        const count = items.reduce((acc, it) => acc + (it.quantity || 0), 0);
+        setCartCount(count);
+      } catch {
+        setCartCount(0);
+      }
+    }
+
+    updateCount();
+
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === 'glee_cart_v1') updateCount();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
 
   const categories = ['Custom T-Shirts', 'Graphic Tees', 'Plain Tees', 'Premium', 'Sale'];
   const newProducts = ['New Arrivals', 'Best Sellers', 'Limited Edition'];
-
-  // Fetch cart count
-  useEffect(() => {
-    async function fetchCartCount() {
-      if (!user || !token) {
-        setCartCount(0);
-        return;
-      }
-      try {
-        const response = await fetch('/api/cart', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const count = data.items?.reduce((acc: number, item: { quantity: number }) => acc + item.quantity, 0) || 0;
-          setCartCount(count);
-        }
-      } catch (error) {
-        console.error('Failed to fetch cart:', error);
-      }
-    }
-    fetchCartCount();
-  }, [user, token]);
 
   return (
     <nav className="bg-white sticky top-0 z-50">
@@ -80,29 +80,13 @@ export default function NavbarClient() {
                 )}
               </Link>
 
-              {/* Sign In / User Menu */}
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <Link href="/profile" className="p-2 bg-gray-50 transition-colors rounded-full">
-                    <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </Link>
-                  <button
-                    onClick={logout}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black transition-colors bg-gray-50 border border-gray-400/15 hover:border-gray-500/45 rounded-3xl"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="px-5 py-2 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors"
-                >
-                  Sign In
-                </Link>
-              )}
+              {/* Sign In Link Only (no user menu)  later changed to checkout button*/}
+              <Link
+                href="/checkout"
+                className="px-5 py-2 bg-black text-white text-sm font-medium rounded-full hover:bg-black/80 transition-colors"
+              >
+                Checkout
+              </Link>
             </div>
           </div>
         </div>
@@ -183,7 +167,7 @@ export default function NavbarClient() {
                   placeholder="Search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-2 text-sm text-black border border-black/15 rounded-lg focus:ring-2 focus:ring-black focus:bg-white transition-all"
                 />
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -197,7 +181,7 @@ export default function NavbarClient() {
                 <Link
                   key={filter}
                   href={`/products?filter=${filter.toLowerCase()}`}
-                  className="px-5 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-full hover:border-black/30 hover:text-black transition-all"
+                  className="px-5 py-2 text-sm font-medium text-gray-700 border border-black/20 rounded-full hover:border-blue-700 hover:text-black transition-all"
                 >
                   {filter}
                 </Link>
