@@ -43,18 +43,21 @@ export async function GET(request: NextRequest) {
     );
 
     if (tables.length === 0) {
-      // Create orders table if it doesn't exist
+      // Create orders table if it doesn't exist. Store customer name/email directly to avoid
+      // depending on a `users` table that may not exist in this simplified app.
       await pool.query(`
         CREATE TABLE IF NOT EXISTS orders (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          user_id INT NOT NULL,
+          user_id INT NULL,
+          user_name VARCHAR(255),
+          user_email VARCHAR(255),
+          phone VARCHAR(32),
           total_amount DECIMAL(10,2) NOT NULL,
           status VARCHAR(50) DEFAULT 'pending',
           shipping_address TEXT,
           payment_method VARCHAR(50),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users(id)
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `);
 
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
           order_id INT NOT NULL,
           product_id INT NOT NULL,
           quantity INT NOT NULL,
-          size VARCHAR(10),
+          size VARCHAR(32),
           price DECIMAL(10,2) NOT NULL,
           FOREIGN KEY (order_id) REFERENCES orders(id),
           FOREIGN KEY (product_id) REFERENCES products(id)
@@ -76,13 +79,12 @@ export async function GET(request: NextRequest) {
       SELECT 
         o.id,
         o.user_id,
-        u.name as user_name,
-        u.email as user_email,
+        o.user_name,
+        o.user_email,
         o.total_amount,
         o.status,
         o.created_at
       FROM orders o
-      JOIN users u ON o.user_id = u.id
       ORDER BY o.created_at DESC
     `);
 

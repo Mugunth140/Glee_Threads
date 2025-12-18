@@ -45,15 +45,36 @@ export default function WhatsappConfirmationPage() {
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
 
   const confirmSent = () => {
-    // Clear local cart and redirect home
-    try {
-      clearCart();
-      localStorage.setItem('glee_cart_v1', JSON.stringify([]));
-    } catch {
-      // ignore
-    }
-    showToast('Thanks — order acknowledged', { type: 'success' });
-    router.push('/');
+    // Try to persist the saved order draft to the database, then clear cart and redirect
+    (async () => {
+      try {
+        const raw = localStorage.getItem('glee_last_order');
+        if (raw) {
+          const payload = JSON.parse(raw);
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) {
+            console.error('Failed to persist order from WhatsApp flow');
+          }
+          // Clear draft
+          localStorage.removeItem('glee_last_order');
+        }
+
+        clearCart();
+        localStorage.setItem('glee_cart_v1', JSON.stringify([]));
+        showToast('Thanks — order acknowledged', { type: 'success' });
+        router.push('/');
+      } catch (err) {
+        console.error('Error confirming WhatsApp order:', err);
+        // fallback: still clear cart
+        try { clearCart(); localStorage.setItem('glee_cart_v1', JSON.stringify([])); } catch {}
+        showToast('Thanks — order acknowledged', { type: 'success' });
+        router.push('/');
+      }
+    })();
   };
 
   return (

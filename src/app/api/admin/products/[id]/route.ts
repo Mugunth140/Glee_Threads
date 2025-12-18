@@ -74,7 +74,7 @@ export async function GET(
         [id]
       );
       colors = Array.isArray(rows) ? rows.map((r: { color_hex: string }) => r.color_hex) : [];
-    } catch (e) {
+    } catch {
       // table might not exist yet
       colors = [];
     }

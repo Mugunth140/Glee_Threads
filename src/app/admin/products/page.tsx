@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Product {
   id: number;
@@ -36,9 +36,9 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-  }, []);
+  }, [fetchProducts]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
@@ -71,7 +71,7 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   const fetchCategories = async () => {
     try {

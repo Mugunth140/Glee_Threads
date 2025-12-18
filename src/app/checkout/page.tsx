@@ -114,24 +114,83 @@ export default function CheckoutPage() {
     });
     msg += `\nSubtotal: ${formatPrice(subtotal)}\nTotal: ${formatPrice(total)}`;
 
-    const encoded = encodeURIComponent(msg);
+    // encoded message (used below as encodedMsg)
+    // Save last order draft to localStorage so the WhatsApp confirmation page can persist it
+    try {
+      const items = cart.map((it) => ({
+        product_id: it.product_id,
+        quantity: it.quantity || 1,
+        size: it.size_name || it.size_id || null,
+        price: Number(it.product?.price || 0),
+      }));
+      const payload = {
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        phone: formData.phone,
+        shipping_address: `${formData.address}${formData.apartment ? ', ' + formData.apartment : ''}, ${formData.city}, ${formData.state} - ${formData.pincode}`,
+        payment_method: 'whatsapp',
+        items,
+        total_amount: subtotal + shipping + gst,
+      };
+      localStorage.setItem('glee_last_order', JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+
+    const encodedMsg = encodeURIComponent(msg);
     // open WhatsApp web/app with prefilled message to owner's number in a new tab
-    const waUrl = `https://wa.me/${ownerNumber}?text=${encoded}`;
+    const waUrl = `https://wa.me/${ownerNumber}?text=${encodedMsg}`;
     window.open(waUrl, '_blank');
 
     // Redirect the current tab to a confirmation page explaining that WhatsApp was opened
     router.replace('/checkout/whatsapp');
   };
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     try {
-      clearCart();
-      localStorage.setItem('glee_cart_v1', JSON.stringify([]));
-    } catch {
-      // ignore
+      const cart = getCart();
+      const items = cart.map((it) => ({
+        product_id: it.product_id,
+        quantity: it.quantity || 1,
+        size: it.size_name || it.size_id || null,
+        price: Number(it.product?.price || 0),
+      }));
+
+      const payload = {
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        phone: formData.phone,
+        shipping_address: `${formData.address}${formData.apartment ? ', ' + formData.apartment : ''}, ${formData.city}, ${formData.state} - ${formData.pincode}`,
+        payment_method: 'manual',
+        items,
+        total_amount: total,
+      };
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to place order', { type: 'error' });
+        return;
+      }
+
+      // Success — clear cart and redirect
+      try {
+        clearCart();
+        localStorage.setItem('glee_cart_v1', JSON.stringify([]));
+      } catch {
+        // ignore
+      }
+      showToast('Order placed — thank you!', { type: 'success' });
+      router.push('/');
+    } catch (err) {
+      console.error('Error placing order:', err);
+      showToast('Failed to place order', { type: 'error' });
     }
-    showToast('Order placed — thank you!', { type: 'success' });
-    router.push('/');
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

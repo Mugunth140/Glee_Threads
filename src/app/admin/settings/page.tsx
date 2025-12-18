@@ -204,7 +204,7 @@ export default function AdminSettingsPage() {
         >
           Featured Products
         </button>
-        <button
+        {/* <button
           onClick={() => setActiveTab('general')}
           className={`px-4 py-2 font-medium transition-colors ${
             activeTab === 'general'
@@ -213,7 +213,7 @@ export default function AdminSettingsPage() {
           }`}
         >
           General Settings
-        </button>
+        </button> */}
       </div>
 
       {/* Featured Products Tab */}

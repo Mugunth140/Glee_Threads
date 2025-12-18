@@ -72,7 +72,9 @@ export default function CartPage() {
         localStorage.setItem('glee_cart_v1', JSON.stringify(updated));
         // notify listeners in same window
         window.dispatchEvent(new StorageEvent('storage', { key: 'glee_cart_v1', newValue: JSON.stringify(updated) }));
-      } catch (e) {console.log(e)}
+      } catch {
+        // ignore
+      }
       setItems(updated);
     })();
 
