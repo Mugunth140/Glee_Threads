@@ -34,7 +34,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const fetchProduct = async () => {
     try {
-      const response = await fetch(`/api/products/${resolvedParams.id}`);
+      const id = resolvedParams?.id || (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean).pop() : undefined);
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/products/${id}`);
       if (!response.ok) {
         throw new Error('Product not found');
       }
@@ -58,7 +64,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     fetchProduct();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedParams.id]);
+  }, []);
 
   const handleAddToCart = async () => {
     if (!selectedSize) {

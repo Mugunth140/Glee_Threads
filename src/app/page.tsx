@@ -25,10 +25,10 @@ export default function Home() {
     async function fetchProducts() {
       try {
         const response = await fetch('/api/products');
-          if (response.ok) {
+        if (response.ok) {
           const data = await response.json();
-          const arr = Array.isArray(data) ? data : [];
-          const visible = arr.filter((p: any) => typeof p.is_visible !== 'undefined' ? !!p.is_visible : !!p.is_active);
+          const arr: Product[] = Array.isArray(data) ? data : [];
+          const visible = arr.filter((p: Product) => typeof p.is_visible !== 'undefined' ? !!p.is_visible : !!p.is_active);
           setFeaturedProducts(visible.slice(0, 8));
         }
       } catch (error) {

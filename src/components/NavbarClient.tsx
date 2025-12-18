@@ -5,11 +5,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export default function NavbarClient() {
   const [showCategories, setShowCategories] = useState(false);
   const [showNewProduct, setShowNewProduct] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(0);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // Initialize cart count from anonymous localStorage cart and listen for changes
   useEffect(() => {
@@ -34,8 +41,20 @@ export default function NavbarClient() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
-  const categories = ['Custom T-Shirts', 'Graphic Tees', 'Plain Tees', 'Premium', 'Sale'];
+
   const newProducts = ['New Arrivals', 'Best Sellers', 'Limited Edition'];
 
   return (
@@ -116,12 +135,12 @@ export default function NavbarClient() {
                   <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50">
                     {categories.map((cat) => (
                       <Link
-                        key={cat}
-                        href={`/products?category=${cat.toLowerCase()}`}
+                        key={cat.id}
+                        href={`/products?category=${cat.slug}`}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors"
                         onClick={() => setShowCategories(false)}
                       >
-                        {cat}
+                        {cat.name}
                       </Link>
                     ))}
                   </div>

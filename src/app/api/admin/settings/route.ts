@@ -1,6 +1,4 @@
-import pool from '@/lib/db';
 import jwt from 'jsonwebtoken';
-import { RowDataPacket } from 'mysql2';
 import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -36,19 +34,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM site_settings');
-    
-    const settings: Record<string, string> = {};
-    rows.forEach(row => {
-      settings[row.setting_key] = row.setting_value;
-    });
-
-    return NextResponse.json({ settings });
-  } catch (error) {
-    console.error('Error fetching settings:', error);
-    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
-  }
+  // Return hardcoded settings
+  return NextResponse.json({ settings: SITE_SETTINGS });
 }
 
 export async function PUT(request: NextRequest) {
@@ -57,20 +44,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    const body = await request.json();
-    
-    // Update each setting
-    for (const [key, value] of Object.entries(body)) {
-      await pool.query(
-        'INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-        [key, value, value]
-      );
-    }
-
-    return NextResponse.json({ message: 'Settings updated successfully' });
-  } catch (error) {
-    console.error('Error updating settings:', error);
-    return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
-  }
+  // Settings are hardcoded, cannot update
+  return NextResponse.json({ error: 'Settings are hardcoded and cannot be updated' }, { status: 403 });
 }

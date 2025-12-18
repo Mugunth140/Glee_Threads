@@ -40,18 +40,28 @@ export default function CheckoutPage() {
     cardCvv: '',
   });
 
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<Array<{
+    id: number;
+    name: string;
+    price: number;
+    size: string | number;
+    color: string;
+    quantity: number;
+    image: string;
+  }>>([]);
 
   useEffect(() => {
-    setCartItems(getCart().map((it) => ({
-      id: it.id,
-      name: it.product?.name || 'Product',
-      price: Number(it.product?.price || 0),
-      size: it.size_name || it.size_id,
-      color: it.color || '',
-      quantity: it.quantity || 1,
-      image: it.product?.image_url || '',
-    })));
+    setTimeout(() => {
+      setCartItems(getCart().map((it) => ({
+        id: it.id,
+        name: it.product?.name || 'Product',
+        price: Number(it.product?.price || 0),
+        size: it.size_name || it.size_id,
+        color: it.color || '',
+        quantity: it.quantity || 1,
+        image: it.product?.image_url || '',
+      })));
+    }, 0);
   }, []);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -117,7 +127,9 @@ export default function CheckoutPage() {
     try {
       clearCart();
       localStorage.setItem('glee_cart_v1', JSON.stringify([]));
-    } catch (e) {}
+    } catch {
+      // ignore
+    }
     showToast('Order placed — thank you!', { type: 'success' });
     router.push('/');
   };
@@ -141,12 +153,6 @@ export default function CheckoutPage() {
       <div className="bg-white border-b border-gray-100">
         <div className="container mx-auto px-4 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">G</span>
-              </div>
-              <span className="text-xl font-semibold text-black">Glee Threads</span>
-            </Link>
             <Link href="/cart" className="text-sm text-gray-600 hover:text-black transition-colors flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -307,7 +313,7 @@ export default function CheckoutPage() {
               <div className="space-y-8">
                 <div className="bg-white rounded-2xl p-6 border border-gray-100">
                   <h2 className="text-xl font-bold text-black mb-6">Shipping</h2>
-                  <p className="text-sm text-gray-600">We'll ship to the address you provided. No shipping method selection is required.</p>
+                  <p className="text-sm text-gray-600">We&apos;ll ship to the address you provided. No shipping method selection is required.</p>
                 </div>
 
                 <div className="flex gap-4">

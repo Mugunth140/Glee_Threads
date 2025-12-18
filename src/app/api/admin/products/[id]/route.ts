@@ -51,7 +51,8 @@ export async function GET(
         p.image_url,
         p.category_id,
         c.name as category_name,
-        p.created_at
+        p.created_at,
+        p.is_out_of_stock
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       WHERE p.id = ?`,
@@ -62,14 +63,8 @@ export async function GET(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    // Get inventory (join sizes table to return size name)
-    const [inventory] = await pool.query<RowDataPacket[]>(
-      `SELECT s.name as size, pi.quantity
-       FROM product_inventory pi
-       JOIN sizes s ON pi.size_id = s.id
-       WHERE pi.product_id = ?`,
-      [id]
-    );
+    // No inventory tracking, sizes are hardcoded
+    const inventory: { size: string }[] = [];
 
     // Get colors if table exists
     let colors: string[] = [];
@@ -78,7 +73,7 @@ export async function GET(
         'SELECT color_hex FROM product_colors WHERE product_id = ?',
         [id]
       );
-      colors = Array.isArray(rows) ? rows.map((r: any) => r.color_hex) : [];
+      colors = Array.isArray(rows) ? rows.map((r: { color_hex: string }) => r.color_hex) : [];
     } catch (e) {
       // table might not exist yet
       colors = [];
@@ -108,7 +103,7 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { name, description, price, image_url, category_id, sizes, colors } = body;
+    const { name, description, price, image_url, category_id, is_out_of_stock, colors } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: 'Name, price, and category are required' }, { status: 400 });
@@ -116,38 +111,12 @@ export async function PUT(
 
     // Update product
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE products SET name = ?, description = ?, price = ?, image_url = ?, category_id = ? WHERE id = ?',
-      [name, description || '', price, image_url || '', category_id, id]
+      'UPDATE products SET name = ?, description = ?, price = ?, image_url = ?, category_id = ?, is_out_of_stock = ? WHERE id = ?',
+      [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0, id]
     );
 
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-    }
-
-    // Update inventory
-    if (sizes && Array.isArray(sizes)) {
-      // Delete existing inventory
-      await pool.query('DELETE FROM product_inventory WHERE product_id = ?', [id]);
-      
-      // Insert new inventory (sizes may be strings) — map to size_id
-      for (const size of sizes) {
-        const sizeName = typeof size === 'string' ? size : (size.size || String(size));
-        // find or create size id
-        const [sizeRows] = await pool.query<any[]>('SELECT id FROM sizes WHERE name = ?', [sizeName]);
-        let sizeId: number | null = null;
-        if (Array.isArray(sizeRows) && sizeRows.length > 0) {
-          sizeId = sizeRows[0].id;
-        } else {
-          const [res] = await pool.query<ResultSetHeader>('INSERT INTO sizes (name) VALUES (?)', [sizeName]);
-          sizeId = res.insertId;
-        }
-        if (sizeId) {
-          await pool.query(
-            'INSERT INTO product_inventory (product_id, size_id, quantity) VALUES (?, ?, ?)',
-            [id, sizeId, 0]
-          );
-        }
-      }
     }
 
     // Update colors: recreate product_colors entries
@@ -197,8 +166,7 @@ export async function DELETE(
     // Delete inventory
     await pool.query('DELETE FROM product_inventory WHERE product_id = ?', [id]);
     
-    // Delete cart items
-    await pool.query('DELETE FROM cart_items WHERE product_id = ?', [id]);
+    // Cart items are stored client-side (anonymous cart). No DB cleanup needed here.
     
     // Delete product
     const [result] = await pool.query<ResultSetHeader>(

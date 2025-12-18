@@ -25,9 +25,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get user from database
+    // Get admin from database
     const [rows] = await pool.execute<UserRow[]>(
-      'SELECT * FROM users WHERE email = ?',
+      'SELECT * FROM admin_users WHERE email = ?',
       [email]
     );
 
@@ -40,18 +40,10 @@ export async function POST(request: Request) {
 
     const user = rows[0];
 
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Access denied. Admin only.' },
-        { status: 403 }
-      );
-    }
-
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    const isValid = bcrypt.compareSync(password, user.password_hash);
 
-    if (!isValidPassword) {
+    if (!isValid) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -60,7 +52,7 @@ export async function POST(request: Request) {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: 'admin' },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -71,7 +63,7 @@ export async function POST(request: Request) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: 'admin',
       },
     });
   } catch (error) {

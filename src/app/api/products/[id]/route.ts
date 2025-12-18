@@ -1,3 +1,5 @@
+
+import { SIZES } from '@/lib/constants';
 import pool from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -12,7 +14,7 @@ export async function GET(
     const [products] = await pool.execute(
       `SELECT 
         p.id, p.name, p.description, p.price, p.image_url, 
-        p.material, p.care_instructions, p.is_active,
+        p.material, p.care_instructions, p.is_active, p.is_out_of_stock,
         c.id as category_id, c.name as category_name
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
@@ -29,35 +31,29 @@ export async function GET(
 
     const product = products[0];
 
-    // Get sizes and availability
-    const [sizes] = await pool.execute(
-      `SELECT 
-        s.id as size_id, s.name as size_name, 
-        pi.quantity, pi.sku
-      FROM product_inventory pi
-      JOIN sizes s ON pi.size_id = s.id
-      WHERE pi.product_id = ?
-      ORDER BY s.display_order`,
-      [productId]
-    );
+    // Get sizes (hardcoded, available if not out of stock)
+    const sizesWithNames = product.is_out_of_stock ? [] : SIZES.map(s => ({
+      size_id: s.id,
+      size_name: s.name,
+      quantity: 0,
+      sku: '',
+    }));
 
-    // Get additional images
-    const [images] = await pool.execute(
-      `SELECT id, image_url, display_order, is_primary
-      FROM product_images
-      WHERE product_id = ?
-      ORDER BY display_order`,
-      [productId]
-    );
+    // Get images from products table
+    const images = product.image_url ? [{
+      image_url: product.image_url,
+      is_primary: true,
+      display_order: 0
+    }] : [];
 
     // Get available colors (if any)
-    let colors: any[] = [];
+    let colors: string[] = [];
     try {
       const [colorRows] = await pool.execute(
         `SELECT color_hex FROM product_colors WHERE product_id = ?`,
         [productId]
       );
-      colors = Array.isArray(colorRows) ? (colorRows as any[]).map(r => r.color_hex) : [];
+      colors = Array.isArray(colorRows) ? (colorRows as { color_hex: string }[]).map(r => r.color_hex) : [];
     } catch (err) {
       // If table doesn't exist or other error, ignore and continue without colors
       console.warn('Could not fetch product colors:', err);
@@ -66,7 +62,7 @@ export async function GET(
 
     return NextResponse.json({
       ...product,
-      sizes,
+      sizes: sizesWithNames,
       images,
       colors,
     });

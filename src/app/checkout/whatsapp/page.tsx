@@ -17,19 +17,29 @@ const formatPrice = (price: number) => {
 
 export default function WhatsappConfirmationPage() {
   const router = useRouter();
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Array<{
+    id: string;
+    name: string;
+    qty: number;
+    size: string | number;
+    color: string;
+    price: number;
+    image: string;
+  }>>([]);
 
   useEffect(() => {
-    const cart = getCart();
-    setItems(cart.map((it) => ({
-      id: it.id,
-      name: it.product?.name || 'Product',
-      qty: it.quantity || 1,
-      size: it.size_name || it.size_id,
-      color: it.color || '',
-      price: Number(it.product?.price || 0),
-      image: it.product?.image_url || '',
-    })));
+    setTimeout(() => {
+      const cart = getCart();
+      setItems(cart.map((it) => ({
+        id: it.id,
+        name: it.product?.name || 'Product',
+        qty: it.quantity || 1,
+        size: it.size_name || it.size_id,
+        color: it.color || '',
+        price: Number(it.product?.price || 0),
+        image: it.product?.image_url || '',
+      })));
+    }, 0);
   }, []);
 
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
@@ -39,7 +49,9 @@ export default function WhatsappConfirmationPage() {
     try {
       clearCart();
       localStorage.setItem('glee_cart_v1', JSON.stringify([]));
-    } catch (e) {}
+    } catch {
+      // ignore
+    }
     showToast('Thanks — order acknowledged', { type: 'success' });
     router.push('/');
   };

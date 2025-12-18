@@ -1,5 +1,5 @@
 -- Create Database
-CREATE DATABASE IF NOT EXISTS dress_shop;
+CREATE DATABASE IF NOT EXISTS gleethreads;
 USE dress_shop;
 
 -- Users table

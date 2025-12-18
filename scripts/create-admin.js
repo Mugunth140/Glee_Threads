@@ -8,9 +8,9 @@ async function createAdmin() {
     
     const conn = await mysql.createConnection({
       host: 'localhost',
-      user: 'root',
-      password: '8220',
-      database: 'dress_shop'
+      user: 'u469789879_gleethreads',
+      password: 'Infronex@2025',
+      database: 'u469789879_gleethreads'
     });
     
     await conn.execute(

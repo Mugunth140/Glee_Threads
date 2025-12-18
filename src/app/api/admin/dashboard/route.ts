@@ -57,10 +57,17 @@ export async function GET(request: Request) {
       'SELECT COUNT(*) as count FROM categories'
     );
 
-    // Get total users
-    const [userCount] = await pool.execute<CountRow[]>(
-      'SELECT COUNT(*) as count FROM users WHERE role = "user"'
-    );
+    // Get total users (site may not track end-users in DB)
+    let totalUsersCount = 0;
+    try {
+      const [userCount] = await pool.execute<CountRow[]>(
+        'SELECT COUNT(*) as count FROM users WHERE role = "user"'
+      );
+      totalUsersCount = userCount[0]?.count || 0;
+    } catch {
+      // users table was removed intentionally; fall back to 0
+      totalUsersCount = 0;
+    }
 
     // Get recent products with category
     const [recentProducts] = await pool.execute<ProductRow[]>(
@@ -121,7 +128,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       totalProducts: productCount[0]?.count || 0,
       totalCategories: categoryCount[0]?.count || 0,
-      totalUsers: userCount[0]?.count || 0,
+      totalUsers: totalUsersCount,
       totalOrders,
       totalRevenue,
       pendingOrders,

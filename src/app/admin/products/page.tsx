@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface Product {
@@ -30,6 +31,7 @@ export default function AdminProductsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetchProducts();
@@ -39,14 +41,30 @@ export default function AdminProductsPage() {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem('adminToken');
+      if (!token) {
+        // Not logged in -> redirect to admin login
+        router.push('/admin/login');
+        return;
+      }
+
       const res = await fetch('/api/admin/products', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (res.status === 401) {
+        // Unauthorized - token invalid or expired
+        router.push('/admin/login');
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setProducts(data.products);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error('Failed to fetch admin products:', err);
       }
     } catch (error) {
       console.error('Error fetching products:', error);

@@ -54,13 +54,13 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           // Map inventory to sizes
           // Map inventory sizes to selectedSizes (inventory rows may exist)
           if (data.inventory && data.inventory.length > 0) {
-            const present = data.inventory.map((i: any) => i.size);
+            const present = data.inventory.map((i: { size: string }) => i.size);
             setSelectedSizes(SIZES.filter(s => present.includes(s)));
           }
 
           // Map colors
           if (data.colors && Array.isArray(data.colors)) {
-            setColors(data.colors.map((c: any) => String(c)));
+            setColors(data.colors.map((c: string) => String(c)));
           }
         } else {
           alert('Product not found');
@@ -78,7 +78,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         const res = await fetch('/api/categories');
         if (res.ok) {
           const data = await res.json();
-          setCategories(data.categories);
+          setCategories(data);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);

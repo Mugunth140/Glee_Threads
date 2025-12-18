@@ -47,10 +47,9 @@ export async function GET(request: NextRequest) {
         p.category_id,
         c.name as category_name,
         p.created_at,
-        CASE WHEN fp.id IS NOT NULL THEN true ELSE false END as is_featured
+        CASE WHEN p.is_featured = 1 THEN true ELSE false END as is_featured
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
-      LEFT JOIN featured_products fp ON p.id = fp.product_id
       ORDER BY p.created_at DESC
     `);
 
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, price, image_url, category_id, sizes, colors } = body;
+    const { name, description, price, image_url, category_id, is_out_of_stock, colors } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: 'Name, price, and category are required' }, { status: 400 });
@@ -77,35 +76,11 @@ export async function POST(request: NextRequest) {
 
     // Insert product
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO products (name, description, price, image_url, category_id) VALUES (?, ?, ?, ?, ?)',
-      [name, description || '', price, image_url || '', category_id]
+      'INSERT INTO products (name, description, price, image_url, category_id, is_out_of_stock) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0]
     );
 
     const productId = result.insertId;
-
-    // Insert inventory for each size (sizes may be array of strings)
-    if (sizes && Array.isArray(sizes)) {
-      for (const size of sizes) {
-        const sizeName = typeof size === 'string' ? size : (size.size || String(size));
-        // find or create size id in sizes table
-        const [sizeRows] = await pool.query<any[]>('SELECT id FROM sizes WHERE name = ?', [sizeName]);
-        let sizeId: number | null = null;
-        if (Array.isArray(sizeRows) && sizeRows.length > 0) {
-          sizeId = sizeRows[0].id;
-        } else {
-          const [res] = await pool.query<ResultSetHeader>('INSERT INTO sizes (name) VALUES (?)', [sizeName]);
-          sizeId = res.insertId;
-        }
-
-        // default quantity 0 for new product when using size-only selection
-        if (sizeId) {
-          await pool.query(
-            'INSERT INTO product_inventory (product_id, size_id, quantity) VALUES (?, ?, ?)',
-            [productId, sizeId, 0]
-          );
-        }
-      }
-    }
 
     // Store colors if provided. Create product_colors table if missing.
     if (colors && Array.isArray(colors) && colors.length > 0) {

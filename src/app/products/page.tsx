@@ -3,6 +3,7 @@
 import { Category, Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // Format price in Indian Rupees
@@ -16,6 +17,7 @@ const formatPrice = (price: number) => {
 };
 
 export default function ProductsPage() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -39,14 +41,16 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const url = selectedCategory 
-        ? `/api/products?category=${selectedCategory}`
-        : '/api/products';
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set('category', selectedCategory);
+      if (selectedStyle) params.set('style', selectedStyle);
+      if (sortBy) params.set('sort', sortBy);
+      const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`;
       const response = await fetch(url);
       const data = await response.json();
       // Only include products that are visible. If API provides `is_visible` use it,
       // otherwise fall back to `is_active`.
-      const visible = (data as any[]).filter((p) => {
+      const visible = (data as Product[]).filter((p) => {
         if (typeof p.is_visible !== 'undefined') return !!p.is_visible;
         return !!p.is_active;
       });
@@ -63,9 +67,14 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
+    const category = searchParams.get('category');
+    setSelectedCategory(category || '');
+  }, [searchParams]);
+
+  useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedStyle, sortBy]);
 
   return (
     <div className="min-h-screen bg-white">

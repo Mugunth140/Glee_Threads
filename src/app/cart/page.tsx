@@ -16,12 +16,24 @@ const formatPrice = (price: number) => {
 };
 
 export default function CartPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Array<{
+    id: string;
+    product_id: number;
+    product: {
+      name: string;
+      price: number;
+      image_url?: string;
+    };
+    size_id?: number;
+    size_name?: string;
+    color?: string;
+    quantity?: number;
+  }>>([]);
 
   useEffect(() => {
     // Populate from localStorage after mount to avoid hydration mismatch
     const initial = getCart();
-    setItems(initial);
+    setTimeout(() => setItems(initial), 0);
 
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'glee_cart_v1') {
@@ -47,11 +59,11 @@ export default function CartPage() {
           const sizes = prod.sizes || [];
           updated.forEach((it, idx) => {
             if (it.product_id === pid && !it.size_name) {
-              const s = sizes.find((ss: any) => ss.size_id === it.size_id);
+              const s = sizes.find((ss: { size_id: number }) => ss.size_id === it.size_id);
               if (s) updated[idx].size_name = s.size_name;
             }
           });
-        } catch (e) {
+        } catch {
           // ignore
         }
       }));
@@ -60,7 +72,7 @@ export default function CartPage() {
         localStorage.setItem('glee_cart_v1', JSON.stringify(updated));
         // notify listeners in same window
         window.dispatchEvent(new StorageEvent('storage', { key: 'glee_cart_v1', newValue: JSON.stringify(updated) }));
-      } catch (e) {}
+      } catch (e) {console.log(e)}
       setItems(updated);
     })();
 
