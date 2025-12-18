@@ -24,7 +24,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     description: '',
     price: '',
     image_url: '',
-    category_id: ''
+    category_id: '',
+    material: '',
+    care_instructions: ''
   });
   
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
@@ -46,16 +48,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           setFormData({
             name: data.product.name,
             description: data.product.description || '',
+            material: data.product.material || '',
+            care_instructions: data.product.care_instructions || '',
             price: data.product.price.toString(),
             image_url: data.product.image_url || '',
             category_id: data.product.category_id.toString()
           });
           
-          // Map inventory to sizes
-          // Map inventory sizes to selectedSizes (inventory rows may exist)
-          if (data.inventory && data.inventory.length > 0) {
-            const present = data.inventory.map((i: { size: string }) => i.size);
-            setSelectedSizes(SIZES.filter(s => present.includes(s)));
+          // Map product sizes (stored on product row)
+          if (data.sizes && Array.isArray(data.sizes)) {
+            setSelectedSizes(data.sizes.map((s: string) => String(s)));
           }
 
           // Map colors
@@ -229,6 +231,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">Material</label>
+                  <input
+                    type="text"
+                    value={formData.material}
+                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                    className="w-full px-4 py-3 bg-white border border-gray-100 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black/10"
+                    placeholder="e.g., 100% Cotton"
+                  />
+                </div>
               </div>
             </div>
 
@@ -282,6 +294,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     </span>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-2">Care Instructions</label>
+                <textarea
+                  value={formData.care_instructions}
+                  onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"
+                  placeholder="e.g., Machine wash cold, tumble dry low"
+                />
               </div>
             </div>
           </div>

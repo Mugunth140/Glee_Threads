@@ -22,7 +22,9 @@ export default function NewProductPage() {
     description: '',
     price: '',
     image_url: '',
-    category_id: ''
+    category_id: '',
+    material: '',
+    care_instructions: ''
   });
   
   // Selected size options (no per-size stock here)
@@ -61,11 +63,11 @@ export default function NewProductPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-          category_id: parseInt(formData.category_id),
-          sizes: selectedSizes,
-          colors: colors
+            ...formData,
+            price: parseFloat(formData.price),
+            category_id: parseInt(formData.category_id),
+            sizes: selectedSizes,
+            colors: colors
         })
       });
 
@@ -182,6 +184,18 @@ export default function NewProductPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">
+                    Material
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.material}
+                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                    className="w-full px-4 py-3 bg-white border border-gray-100 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black/10"
+                    placeholder="e.g., 100% Cotton"
+                  />
+                </div>
               </div>
             </div>
 
@@ -234,6 +248,19 @@ export default function NewProductPage() {
                     </span>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-2">
+                  Care Instructions
+                </label>
+                <textarea
+                  value={formData.care_instructions}
+                  onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"
+                  placeholder="e.g., Machine wash cold, tumble dry low"
+                />
               </div>
             </div>
           </div>

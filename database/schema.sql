@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS products (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   price DECIMAL(10, 2) NOT NULL,
+  sizes JSON DEFAULT NULL,
   category_id INT,
   image_url VARCHAR(500),
   material VARCHAR(100),

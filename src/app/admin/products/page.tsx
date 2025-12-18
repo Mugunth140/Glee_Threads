@@ -33,10 +33,7 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, [fetchProducts]);
+  // initial load will run after fetch functions are defined
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -85,6 +82,11 @@ export default function AdminProductsPage() {
       console.error('Error fetching categories:', error);
     }
   };
+
+    useEffect(() => {
+      fetchProducts();
+      fetchCategories();
+    }, [fetchProducts]);
 
   const handleDelete = async () => {
     if (!productToDelete) return;

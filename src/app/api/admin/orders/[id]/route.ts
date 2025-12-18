@@ -49,7 +49,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Status is required' }, { status: 400 });
     }
 
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'paid', 'cancelled'];
     if (!validStatuses.includes(status.toLowerCase())) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }

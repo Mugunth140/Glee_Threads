@@ -57,9 +57,13 @@ export async function PUT(
         'INSERT INTO featured_products (product_id, position) VALUES (?, ?) ON DUPLICATE KEY UPDATE position = ?',
         [id, newPosition, newPosition]
       );
+      // Mark product row as featured for quick queries
+      await pool.query('UPDATE products SET is_featured = 1 WHERE id = ?', [id]);
     } else {
       // Remove from featured products
       await pool.query('DELETE FROM featured_products WHERE product_id = ?', [id]);
+      // Clear product featured flag
+      await pool.query('UPDATE products SET is_featured = 0 WHERE id = ?', [id]);
     }
 
     return NextResponse.json({ 

@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, price, image_url, category_id, is_out_of_stock, colors } = body;
+    const { name, description, price, image_url, category_id, is_out_of_stock, colors, sizes, material, care_instructions } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: 'Name, price, and category are required' }, { status: 400 });
@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
 
     // Insert product
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO products (name, description, price, image_url, category_id, is_out_of_stock) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0]
+      'INSERT INTO products (name, description, price, image_url, category_id, is_out_of_stock, material, care_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0, material || null, care_instructions || null]
     );
 
     const productId = result.insertId;
@@ -97,6 +97,17 @@ export async function POST(request: NextRequest) {
         const hex = String(color).trim();
         if (!hex) continue;
         await pool.query('INSERT INTO product_colors (product_id, color_hex) VALUES (?, ?)', [productId, hex]);
+      }
+    }
+
+    // Persist sizes (admin-selected) directly on the product row as JSON
+    if (sizes && Array.isArray(sizes)) {
+      try {
+        const clean: string[] = sizes.map((s: unknown) => String(s).trim()).filter((s: string) => s.length > 0);
+        // Attempt to update the product row with JSON sizes. If the column doesn't exist, catch and log.
+        await pool.query('UPDATE products SET sizes = ? WHERE id = ?', [JSON.stringify(clean), productId]);
+      } catch (e) {
+        console.error('Failed to persist product sizes on product row', e);
       }
     }
 

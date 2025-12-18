@@ -20,7 +20,7 @@ const formatPrice = (price: number) => {
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const [product, setProduct] = useState<Product | null>(null);
-  const [selectedSize, setSelectedSize] = useState<number | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +49,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       // Pre-select first size if available
       const firstSize = data.sizes?.[0];
       if (firstSize) {
-        setSelectedSize(firstSize.size_id);
+        setSelectedSize(firstSize.size_name || null);
       }
       // Pre-select first color if available
       const firstColor = data.colors?.[0];
@@ -81,8 +81,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       // Use anonymous localStorage cart so users can add items without authentication
       addToAnonymousCart({
         product_id: product?.id || 0,
-        size_id: selectedSize,
-        size_name: selectedSizeInfo?.size_name || undefined,
+        size_id: 0,
+        size_name: selectedSizeInfo?.size_name || selectedSize || undefined,
         quantity: 1,
         color: selectedColor || undefined,
         product: { id: product?.id || 0, name: product?.name, price: product?.price, image_url: product?.image_url },
@@ -101,7 +101,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const getSelectedSizeInfo = () => {
     if (!selectedSize || !product?.sizes) return null;
-    return product.sizes.find((s) => s.size_id === selectedSize);
+    return product.sizes.find((s) => s.size_name === selectedSize);
   };
 
   const selectedSizeInfo = getSelectedSizeInfo();
@@ -198,15 +198,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <div>
                 <p className="text-sm text-gray-600 mb-3">Choose Color</p>
                 <div className="flex items-center gap-3">
-                  {product.colors.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setSelectedColor(c)}
-                      aria-label={`Select color ${c}`}
-                      className={`w-9 h-9 rounded-full border-2 transition-all ${selectedColor === c ? 'border-black' : 'border-gray-200'}`}
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
+                  {product.colors.map((c) => {
+                    return (
+                      <button
+                        key={c}
+                        onClick={() => setSelectedColor(c)}
+                        aria-label={`Select color ${c}`}
+                        className={`w-9 h-9 rounded-full border-2 transition-all ${selectedColor === c ? 'border-black' : 'border-gray-200'}`}
+                        style={{ backgroundColor: c }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -215,19 +217,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <div>
               <p className="text-sm text-gray-600 mb-3">Select Size</p>
               <div className="flex flex-wrap gap-2">
-                {product.sizes?.map((size) => (
-                  <button
-                    key={size.size_id}
-                    onClick={() => setSelectedSize(size.size_id)}
-                    className={`min-w-14 px-5 py-3 rounded-full text-sm font-medium transition-all ${
-                      selectedSize === size.size_id
-                        ? 'bg-black text-white'
-                        : 'bg-gray-100 text-black hover:bg-gray-200'
-                    }`}
-                  >
-                    {size.size_name}
-                  </button>
-                ))}
+                {product.sizes && product.sizes.length > 0 ? (
+                  product.sizes.map((size) => {
+                    return (
+                      <button
+                        key={size.size_name}
+                        onClick={() => setSelectedSize(size.size_name)}
+                        className={`min-w-14 px-5 py-3 rounded-full text-sm font-medium transition-all ${
+                          selectedSize === size.size_name
+                            ? 'bg-black text-white'
+                            : 'bg-gray-100 text-black hover:bg-gray-200'
+                        }`}
+                      >
+                        {size.size_name}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-gray-500">Size options are not configured for this product.</p>
+                )}
               </div>
               {/* Stock/quantity display removed per request */}
             </div>

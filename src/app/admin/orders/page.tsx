@@ -79,11 +79,7 @@ export default function AdminOrdersPage() {
     switch (status.toLowerCase()) {
       case 'pending':
         return 'bg-yellow-500/20 text-yellow-400';
-      case 'processing':
-        return 'bg-blue-500/20 text-blue-400';
-      case 'shipped':
-        return 'bg-purple-500/20 text-purple-400';
-      case 'delivered':
+      case 'paid':
         return 'bg-green-500/20 text-green-400';
       case 'cancelled':
         return 'bg-red-500/20 text-red-400';
@@ -116,9 +112,7 @@ export default function AdminOrdersPage() {
         >
           <option value="all">All Orders</option>
           <option value="pending">Pending</option>
-          <option value="processing">Processing</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
+          <option value="paid">Paid</option>
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
@@ -171,7 +165,7 @@ export default function AdminOrdersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(order.status)}`}>
                         {order.status}
                       </span>
                     </td>
@@ -244,9 +238,7 @@ export default function AdminOrdersPage() {
                   className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black/10"
                 >
                   <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
+                  <option value="paid">Paid</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>

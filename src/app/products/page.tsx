@@ -23,10 +23,18 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedStyle, setSelectedStyle] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('');
+  const [selectedPriceRange, setSelectedPriceRange] = useState<string>('');
+  const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
   const styles = ['Graphic', 'Plain', 'Oversized', 'Premium', 'Custom'];
+  const PRICE_RANGES = [
+    { key: 'under-999', label: 'Under ₹999', min: 0, max: 998 },
+    { key: '999-1499', label: '₹999 - ₹1,499', min: 999, max: 1499 },
+    { key: '1500-2499', label: '₹1,500 - ₹2,499', min: 1500, max: 2499 },
+    { key: '2500+', label: '₹2,500+', min: 2500, max: Infinity },
+  ];
 
   const fetchCategories = async () => {
     try {
@@ -46,15 +54,57 @@ export default function ProductsPage() {
       if (selectedStyle) params.set('style', selectedStyle);
       if (sortBy) params.set('sort', sortBy);
       const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`;
+      console.debug('Fetching products from', url, { selectedCategory, selectedStyle, sortBy });
       const response = await fetch(url);
+      console.debug('Products API response status:', response.status, response.ok);
       const data = await response.json();
+      // Normalize response: API should return an array, but sometimes it may be wrapped
+      const possible = data as unknown;
+      let items: Product[] = [];
+      if (Array.isArray(possible)) items = possible as Product[];
+      else if (possible && typeof possible === 'object') {
+        const wrapped = possible as { products?: unknown };
+        if (Array.isArray(wrapped.products)) items = wrapped.products as Product[];
+      }
+      if (!Array.isArray(items)) {
+        console.warn('Unexpected products response:', data);
+        items = [];
+      }
+      console.debug('Products fetched, count:', items.length);
       // Only include products that are visible. If API provides `is_visible` use it,
       // otherwise fall back to `is_active`.
-      const visible = (data as Product[]).filter((p) => {
+      const visible = items.filter((p) => {
         if (typeof p.is_visible !== 'undefined') return !!p.is_visible;
         return !!p.is_active;
       });
-      setProducts(visible);
+
+      // Apply client-side size and price filters (server-side filtering may not be available on all DBs)
+      const filtered = visible.filter((p) => {
+        // Price filter
+        if (selectedPriceRange) {
+          const range = PRICE_RANGES.find(r => r.key === selectedPriceRange);
+          if (range) {
+            const priceNum = Number(p.price || 0);
+            if (priceNum < range.min || priceNum > (range.max === Infinity ? Number.MAX_SAFE_INTEGER : range.max)) return false;
+          }
+        }
+
+        // Size filter
+        if (selectedSizeFilter) {
+          const sizes = p.sizes || [];
+          // sizes may be array of objects or strings; normalize to uppercase names
+          const names = Array.isArray(sizes)
+            ? sizes
+                .map((s: unknown) => (typeof s === 'string' ? String(s) : ((s as { size_name?: string })?.size_name ?? String(s))))
+                .map(n => n.toUpperCase())
+            : [];
+          if (!names.includes(selectedSizeFilter.toUpperCase())) return false;
+        }
+
+        return true;
+      });
+
+      setProducts(filtered);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -74,7 +124,7 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, selectedStyle, sortBy]);
+  }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -176,12 +226,13 @@ export default function ProductsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-3">Price Range</p>
                 <div className="flex flex-wrap gap-2">
-                  {['Under ₹999', '₹999 - ₹1,499', '₹1,500 - ₹2,499', '₹2,500+'].map((range) => (
+                  {PRICE_RANGES.map((r) => (
                     <button
-                      key={range}
-                      className="px-4 py-2 rounded-full text-sm bg-white border border-gray-200 text-gray-700 hover:border-black transition-all"
+                      key={r.key}
+                      onClick={() => setSelectedPriceRange(selectedPriceRange === r.key ? '' : r.key)}
+                      className={`px-4 py-2 rounded-full text-sm transition-all ${selectedPriceRange === r.key ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-700 hover:border-black'}`} 
                     >
-                      {range}
+                      {r.label}
                     </button>
                   ))}
                 </div>
@@ -191,14 +242,15 @@ export default function ProductsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-3">Size</p>
                 <div className="flex flex-wrap gap-2">
-                  {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                    <button
-                      key={size}
-                      className="w-12 h-10 rounded-full text-sm bg-white border border-gray-200 text-gray-700 hover:border-black transition-all"
-                    >
-                      {size}
-                    </button>
-                  ))}
+                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSizeFilter(selectedSizeFilter === size ? '' : size)}
+                        className={`w-12 h-10 rounded-full text-sm transition-all ${selectedSizeFilter === size ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-700 hover:border-black'}`}
+                      >
+                        {size}
+                      </button>
+                    ))}
                 </div>
               </div>
             </div>
@@ -211,6 +263,8 @@ export default function ProductsPage() {
                   setSelectedCategory('');
                   setSelectedStyle('');
                   setSortBy('');
+                  setSelectedPriceRange('');
+                  setSelectedSizeFilter('');
                 }}
                 className="text-sm font-medium text-black hover:underline"
               >
@@ -241,6 +295,8 @@ export default function ProductsPage() {
               onClick={() => {
                 setSelectedCategory('');
                 setSelectedStyle('');
+                setSelectedPriceRange('');
+                setSelectedSizeFilter('');
               }}
               className="px-6 py-3 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition-all"
             >
@@ -266,6 +322,7 @@ export default function ProductsPage() {
                   <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <button className="w-full py-3 bg-white text-black text-sm font-semibold rounded-full shadow-lg hover:bg-black hover:text-white transition-colors">
                       Quick Add
+              {/* Reset price & size filters when clearing */}
                     </button>
                   </div>
                 </div>

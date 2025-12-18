@@ -49,6 +49,8 @@ export async function GET(
         p.description,
         p.price,
         p.image_url,
+        p.material,
+        p.care_instructions,
         p.category_id,
         c.name as category_name,
         p.created_at,
@@ -63,8 +65,17 @@ export async function GET(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    // No inventory tracking, sizes are hardcoded
-    const inventory: { size: string }[] = [];
+    // Sizes are stored on the product row as JSON (array of size names)
+    let sizesArr: string[] = [];
+    try {
+      const raw = (products[0] as RowDataPacket & { sizes?: unknown }).sizes;
+      if (raw) {
+        if (typeof raw === 'string') sizesArr = JSON.parse(String(raw));
+        else if (Array.isArray(raw)) sizesArr = raw as string[];
+      }
+    } catch {
+      sizesArr = [];
+    }
 
     // Get colors if table exists
     let colors: string[] = [];
@@ -81,7 +92,7 @@ export async function GET(
 
     return NextResponse.json({ 
       product: products[0],
-      inventory,
+      sizes: sizesArr,
       colors
     });
   } catch (error) {
@@ -103,7 +114,7 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { name, description, price, image_url, category_id, is_out_of_stock, colors } = body;
+    const { name, description, price, image_url, category_id, is_out_of_stock, colors, sizes, material, care_instructions } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: 'Name, price, and category are required' }, { status: 400 });
@@ -111,8 +122,8 @@ export async function PUT(
 
     // Update product
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE products SET name = ?, description = ?, price = ?, image_url = ?, category_id = ?, is_out_of_stock = ? WHERE id = ?',
-      [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0, id]
+      'UPDATE products SET name = ?, description = ?, price = ?, image_url = ?, category_id = ?, is_out_of_stock = ?, material = ?, care_instructions = ? WHERE id = ?',
+      [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0, material || null, care_instructions || null, id]
     );
 
     if (result.affectedRows === 0) {
@@ -138,6 +149,16 @@ export async function PUT(
         }
       } catch (e) {
         console.error('Failed to save product colors', e);
+      }
+    }
+
+    // Persist sizes on product row
+    if (Array.isArray(sizes)) {
+      try {
+        const clean: string[] = sizes.map((s: unknown) => String(s).trim()).filter((s: string) => s.length > 0);
+        await pool.query('UPDATE products SET sizes = ? WHERE id = ?', [JSON.stringify(clean), id]);
+      } catch (e) {
+        console.error('Failed to persist product sizes on product row', e);
       }
     }
 

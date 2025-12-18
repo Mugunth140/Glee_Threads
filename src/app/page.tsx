@@ -22,22 +22,21 @@ export default function Home() {
   const categories = ['All', 'Graphic', 'Plain', 'Oversized', 'Premium', 'Custom'];
 
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchFeatured() {
       try {
-        const response = await fetch('/api/products');
-        if (response.ok) {
-          const data = await response.json();
+        const res = await fetch('/api/featured-products');
+        if (res.ok) {
+          const data = await res.json();
           const arr: Product[] = Array.isArray(data) ? data : [];
-          const visible = arr.filter((p: Product) => typeof p.is_visible !== 'undefined' ? !!p.is_visible : !!p.is_active);
-          setFeaturedProducts(visible.slice(0, 8));
+          setFeaturedProducts(arr.slice(0, 8));
         }
       } catch (error) {
-        console.error('Failed to fetch products:', error);
+        console.error('Failed to fetch featured products:', error);
       } finally {
         setLoading(false);
       }
     }
-    fetchProducts();
+    fetchFeatured();
   }, []);
 
   return (
