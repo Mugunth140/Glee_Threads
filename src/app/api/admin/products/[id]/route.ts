@@ -84,7 +84,12 @@ export async function GET(
         'SELECT color_hex FROM product_colors WHERE product_id = ?',
         [id]
       );
-      colors = Array.isArray(rows) ? rows.map((r: { color_hex: string }) => r.color_hex) : [];
+      if (Array.isArray(rows)) {
+        const typed = rows as Array<RowDataPacket & { color_hex: string }>;
+        colors = typed.map(r => String(r.color_hex));
+      } else {
+        colors = [];
+      }
     } catch {
       // table might not exist yet
       colors = [];

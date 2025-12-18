@@ -8,6 +8,7 @@ export interface Product {
   category_name?: string;
   material?: string;
   care_instructions?: string;
+  is_visible?: boolean;
   is_active: boolean;
   created_at?: string;
   sizes?: ProductSize[];

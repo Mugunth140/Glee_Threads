@@ -1,6 +1,6 @@
 "use client";
 
-import { getCart, removeFromCartById, updateQuantity } from '@/lib/anonymousCart';
+import { getCart, removeFromCartById, updateQuantity, type CartItem } from '@/lib/anonymousCart';
 import { showToast } from '@/lib/toast';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -16,19 +16,7 @@ const formatPrice = (price: number) => {
 };
 
 export default function CartPage() {
-  const [items, setItems] = useState<Array<{
-    id: string;
-    product_id: number;
-    product: {
-      name: string;
-      price: number;
-      image_url?: string;
-    };
-    size_id?: number;
-    size_name?: string;
-    color?: string;
-    quantity?: number;
-  }>>([]);
+  const [items, setItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
     // Populate from localStorage after mount to avoid hydration mismatch

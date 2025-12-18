@@ -1,9 +1,12 @@
 'use client';
 
+// Ensure this page is rendered dynamically to avoid build-time prerender errors
+export const dynamic = 'force-dynamic';
+
 import { Category, Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+// useSearchParams causes prerendering issues during build; use window.location in a client-only effect instead
 import { useEffect, useState } from 'react';
 
 // Format price in Indian Rupees
@@ -17,7 +20,7 @@ const formatPrice = (price: number) => {
 };
 
 export default function ProductsPage() {
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -117,9 +120,20 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
-    const category = searchParams.get('category');
-    setSelectedCategory(category || '');
-  }, [searchParams]);
+    // Read category from browser URL on mount and when navigation occurs
+    const readCategoryFromUrl = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const category = params.get('category');
+        setSelectedCategory(category || '');
+      } catch {
+        setSelectedCategory('');
+      }
+    };
+    readCategoryFromUrl();
+    window.addEventListener('popstate', readCategoryFromUrl);
+    return () => window.removeEventListener('popstate', readCategoryFromUrl);
+  }, []);
 
   useEffect(() => {
     fetchProducts();

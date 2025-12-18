@@ -41,7 +41,7 @@ export default function CheckoutPage() {
   });
 
   const [cartItems, setCartItems] = useState<Array<{
-    id: number;
+    id: string;
     name: string;
     price: number;
     size: string | number;
