@@ -141,3 +141,10 @@ ON DUPLICATE KEY UPDATE quantity = VALUES(quantity);
 INSERT INTO users (email, password_hash, name, role) VALUES
   ('admin@dressshop.com', '$2b$10$rZY4qKQxqq1ZV5xK5nC5Ru5yKxvqzDZJ5nC5Ru5yKxvqzDZJ5nC5R', 'Admin User', 'admin')
 ON DUPLICATE KEY UPDATE email = VALUES(email);
+
+-- Subscribes table
+CREATE TABLE IF NOT EXISTS subscribes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -3,6 +3,7 @@ import { Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import showToast from '@/lib/toast';
 
 // Format price in Indian Rupees
 const formatPrice = (price: number) => {
@@ -18,6 +19,35 @@ export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [email, setEmail] = useState('');
+  const [subscribing, setSubscribing] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setSubscribing(true);
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast(data.message || 'Successfully subscribed!', { type: 'success' });
+        setEmail('');
+      } else {
+        showToast(data.error || 'Failed to subscribe', { type: 'error' });
+      }
+    } catch (error) {
+      showToast('Something went wrong', { type: 'error' });
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   const categories = ['All', 'Graphic', 'Plain', 'Oversized', 'Premium', 'Custom'];
 
@@ -286,17 +316,22 @@ export default function Home() {
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-black mb-4">Stay in the Loop</h2>
             <p className="text-gray-500 mb-8">Subscribe to get special offers, free giveaways, and exclusive deals.</p>
-            <form className="flex gap-3 max-w-md mx-auto">
+            <form onSubmit={handleSubscribe} className="flex gap-3 max-w-md mx-auto">
               <input
                 type="email"
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 px-5 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-black/50 text-black"
+                disabled={subscribing}
+                required
               />
               <button
                 type="submit"
-                className="px-8 py-3 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors"
+                disabled={subscribing}
+                className="px-8 py-3 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
               >
-                Subscribe
+                {subscribing ? 'Subscribing...' : 'Subscribe'}
               </button>
             </form>
           </div>
