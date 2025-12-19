@@ -65,16 +65,16 @@ export default function NavbarClient() {
           <div className="flex justify-between items-center h-16">
             {/* Left - About, FAQs */}
             <div className="flex items-center gap-6">
-              <Link href="/about" className="text-sm text-gray-700 hover:text-black transition-colors">
+              <Link href="/about" className="text-sm text-gray-700 hover:text-primary transition-colors">
                 About
               </Link>
-              <Link href="/faqs" className="text-sm text-gray-700 hover:text-black transition-colors">
+              <Link href="/faqs" className="text-sm text-gray-700 hover:text-primary transition-colors">
                 FAQs
               </Link>
             </div>
 
             {/* Center - Logo */}
-            <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center gap-0.5">
+            <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center gap-0.5 group">
               <Image 
                 src="/glee_logo.png" 
                 alt="Glee Logo" 
@@ -82,18 +82,18 @@ export default function NavbarClient() {
                 height={24}
                 className="object-contain"
               />
-              <span className="text-3xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
+              <span className="text-3xl font-extrabold text-black group-hover:text-primary transition-colors" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
             </Link>
 
             {/* Right - Cart & Sign In */}
             <div className="flex items-center gap-4">
               {/* Cart Icon with Badge */}
-              <Link href="/cart" className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link href="/cart" className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors group">
+                <svg className="w-6 h-6 text-black group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-xs font-medium rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs font-medium rounded-full flex items-center justify-center">
                     {cartCount > 99 ? '99+' : cartCount}
                   </span>
                 )}
@@ -102,7 +102,7 @@ export default function NavbarClient() {
               {/* Sign In Link Only (no user menu)  later changed to checkout button*/}
               <Link
                 href="/checkout"
-                className="px-5 py-2 bg-black text-white text-sm font-medium rounded-full hover:bg-black/80 transition-colors"
+                className="px-5 py-2 bg-primary text-white text-sm font-medium rounded-full hover:bg-primary-hover transition-colors"
               >
                 Checkout
               </Link>
@@ -120,14 +120,14 @@ export default function NavbarClient() {
               {/* Categories Dropdown */}
               <div className="relative">
                 <button
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-primary transition-colors"
                   onClick={() => {
                     setShowCategories(!showCategories);
                     setShowNewProduct(false);
                   }}
                 >
                   Categories
-                  <svg className={`w-4 h-4 transition-transform ${showCategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 transition-transform ${showCategories ? 'rotate-180 text-primary' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
@@ -137,7 +137,7 @@ export default function NavbarClient() {
                       <Link
                         key={cat.id}
                         href={`/products?category=${cat.slug}`}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
                         onClick={() => setShowCategories(false)}
                       >
                         {cat.name}
@@ -150,14 +150,14 @@ export default function NavbarClient() {
               {/* New Product Dropdown */}
               <div className="relative hidden md:block">
                 <button
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-primary transition-colors"
                   onClick={() => {
                     setShowNewProduct(!showNewProduct);
                     setShowCategories(false);
                   }}
                 >
                   New Product
-                  <svg className={`w-4 h-4 transition-transform ${showNewProduct ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 transition-transform ${showNewProduct ? 'rotate-180 text-primary' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
@@ -167,7 +167,7 @@ export default function NavbarClient() {
                       <Link
                         key={item}
                         href={`/products?sort=${item.toLowerCase().replace(' ', '-')}`}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
                         onClick={() => setShowNewProduct(false)}
                       >
                         {item}
@@ -186,7 +186,7 @@ export default function NavbarClient() {
                   placeholder="Search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm text-black border border-black/15 rounded-lg focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-2 text-sm text-black border border-black/15 rounded-lg focus:ring-2 focus:ring-primary focus:bg-white transition-all"
                 />
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -200,7 +200,7 @@ export default function NavbarClient() {
                 <Link
                   key={filter}
                   href={`/products?filter=${filter.toLowerCase()}`}
-                  className="px-5 py-2 text-sm font-medium text-gray-700 border border-black/20 rounded-full hover:border-blue-700 hover:text-black transition-all"
+                  className="px-5 py-2 text-sm font-medium text-gray-700 border border-black/20 rounded-full hover:border-primary hover:text-primary transition-all"
                 >
                   {filter}
                 </Link>

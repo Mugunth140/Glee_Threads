@@ -91,7 +91,7 @@ export default function Home() {
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/customize"
-                  className="inline-flex items-center gap-2 bg-black text-white px-8 py-4 rounded-full text-sm font-semibold hover:bg-gray-800 transition-all"
+                  className="inline-flex items-center gap-2 bg-primary text-white px-8 py-4 rounded-full text-sm font-semibold hover:bg-primary-hover transition-all"
                 >
                   Customize Now
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ export default function Home() {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-6 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                   selectedCategory === cat
-                    ? 'bg-black text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -322,14 +322,14 @@ export default function Home() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 px-5 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-black/50 text-black"
+                className="flex-1 px-5 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 text-black"
                 disabled={subscribing}
                 required
               />
               <button
                 type="submit"
                 disabled={subscribing}
-                className="px-8 py-3 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
+                className="px-8 py-3 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary-hover transition-colors disabled:opacity-50"
               >
                 {subscribing ? 'Subscribing...' : 'Subscribe'}
               </button>

@@ -225,7 +225,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         onClick={() => setSelectedSize(size.size_name)}
                         className={`min-w-14 px-5 py-3 rounded-full text-sm font-medium transition-all ${
                           selectedSize === size.size_name
-                            ? 'bg-black text-white'
+                            ? 'bg-primary text-white'
                             : 'bg-gray-100 text-black hover:bg-gray-200'
                         }`}
                       >
@@ -249,7 +249,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   (product.sizes && product.sizes.length > 0 && !selectedSize) ||
                   addingToCart
                 }
-                className="flex-1 bg-black text-white py-4 rounded-full text-sm font-semibold hover:bg-gray-800 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 bg-primary text-white py-4 rounded-full text-sm font-semibold hover:bg-primary-hover transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {addingToCart ? 'Adding...' : 'Add to Cart'}
               </button>

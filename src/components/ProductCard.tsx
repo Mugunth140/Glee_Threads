@@ -26,12 +26,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.description}
           </p>
           {product.category_name && (
-            <span className="inline-block bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded mb-2">
+            <span className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded mb-2">
               {product.category_name}
             </span>
           )}
           <div className="flex justify-between items-center">
-            <span className="text-2xl font-bold text-pink-600">
+            <span className="text-2xl font-bold text-primary">
               ${Number(product.price).toFixed(2)}
             </span>
           </div>
@@ -47,7 +47,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               ))}
             </div>
           )}
-          <button className="w-full mt-4 bg-pink-600 text-white py-2 rounded-lg hover:bg-pink-700 transition">
+          <button className="w-full mt-4 bg-primary text-white py-2 rounded-lg hover:bg-primary-hover transition">
             View Details
           </button>
         </div>

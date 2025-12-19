@@ -166,7 +166,7 @@ export default function ProductsPage() {
               onClick={() => setSelectedCategory('')}
               className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
                 selectedCategory === ''
-                  ? 'bg-black text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -178,7 +178,7 @@ export default function ProductsPage() {
                 onClick={() => setSelectedCategory(category.slug)}
                 className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
                   selectedCategory === category.slug
-                    ? 'bg-black text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -226,7 +226,7 @@ export default function ProductsPage() {
                       onClick={() => setSelectedStyle(selectedStyle === style ? '' : style)}
                       className={`px-4 py-2 rounded-full text-sm transition-all ${
                         selectedStyle === style
-                          ? 'bg-black text-white'
+                          ? 'bg-primary text-white'
                           : 'bg-white border border-gray-200 text-gray-700 hover:border-black'
                       }`}
                     >
@@ -244,7 +244,7 @@ export default function ProductsPage() {
                     <button
                       key={r.key}
                       onClick={() => setSelectedPriceRange(selectedPriceRange === r.key ? '' : r.key)}
-                      className={`px-4 py-2 rounded-full text-sm transition-all ${selectedPriceRange === r.key ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-700 hover:border-black'}`} 
+                      className={`px-4 py-2 rounded-full text-sm transition-all ${selectedPriceRange === r.key ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-700 hover:border-black'}`} 
                     >
                       {r.label}
                     </button>
@@ -260,7 +260,7 @@ export default function ProductsPage() {
                       <button
                         key={size}
                         onClick={() => setSelectedSizeFilter(selectedSizeFilter === size ? '' : size)}
-                        className={`w-12 h-10 rounded-full text-sm transition-all ${selectedSizeFilter === size ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-700 hover:border-black'}`}
+                        className={`w-12 h-10 rounded-full text-sm transition-all ${selectedSizeFilter === size ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-700 hover:border-black'}`}
                       >
                         {size}
                       </button>
@@ -312,7 +312,7 @@ export default function ProductsPage() {
                 setSelectedPriceRange('');
                 setSelectedSizeFilter('');
               }}
-              className="px-6 py-3 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition-all"
+              className="px-6 py-3 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary-hover transition-all"
             >
               View All Products
             </button>
@@ -334,7 +334,7 @@ export default function ProductsPage() {
                   />
                   {/* Quick Add Button */}
                   <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button className="w-full py-3 bg-white text-black text-sm font-semibold rounded-full shadow-lg hover:bg-black hover:text-white transition-colors">
+                    <button className="w-full py-3 bg-white text-black text-sm font-semibold rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors">
                       Quick Add
               {/* Reset price & size filters when clearing */}
                     </button>
