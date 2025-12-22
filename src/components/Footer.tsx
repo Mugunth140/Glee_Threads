@@ -8,7 +8,7 @@ export default function Footer() {
     <footer className="bg-white border-t border-gray-100 mt-auto">
       {/* Main Footer */}
       <div className="container mx-auto px-4 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-0.5 mb-6">
@@ -49,8 +49,8 @@ export default function Footer() {
           </div>
 
           {/* Shop Links */}
-          <div>
-            <h4 className="text-sm font-semibold text-black mb-5 uppercase tracking-wider">Shop</h4>
+          <div className="h-full flex flex-col justify-start">
+            <h4 className="text-sm font-semibold text-black mb-4 uppercase tracking-wider">Shop</h4>
             <ul className="space-y-3">
               <li>
                 <Link href="/products" className="text-sm text-gray-500 hover:text-primary transition-colors">
@@ -80,36 +80,9 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Company Links */}
-          <div>
-            <h4 className="text-sm font-semibold text-black mb-5 uppercase tracking-wider">Company</h4>
-            <ul className="space-y-3">
-              <li>
-                <Link href="/about" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/careers" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                  Careers
-                </Link>
-              </li>
-              <li>
-                <Link href="/press" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                  Press
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                  Blog
-                </Link>
-              </li>
-            </ul>
-          </div>
-
           {/* Support Links */}
-          <div>
-            <h4 className="text-sm font-semibold text-black mb-5 uppercase tracking-wider">Support</h4>
+          <div className="h-full flex flex-col justify-start">
+            <h4 className="text-sm font-semibold text-black mb-4 uppercase tracking-wider">Support</h4>
             <ul className="space-y-3">
               <li>
                 <Link href="/faqs" className="text-sm text-gray-500 hover:text-primary transition-colors">
@@ -117,8 +90,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/shipping" className="text-sm text-gray-500 hover:text-primary transition-colors">
-                  Shipping & Returns
+                <Link href="/about" className="text-sm text-gray-500 hover:text-primary transition-colors">
+                  About Us
                 </Link>
               </li>
               <li>
@@ -144,13 +117,13 @@ export default function Footer() {
               © {currentYear} Glee Threads. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
-              <Link href="/privacy" className="text-sm text-gray-400 hover:text-primary transition-colors">
+              <Link href="/legal#privacy" className="text-sm text-gray-400 hover:text-primary transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-sm text-gray-400 hover:text-primary transition-colors">
+              <Link href="/legal#terms" className="text-sm text-gray-400 hover:text-primary transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="text-sm text-gray-400 hover:text-primary transition-colors">
+              <Link href="/legal#cookies" className="text-sm text-gray-400 hover:text-primary transition-colors">
                 Cookies
               </Link>
             </div>

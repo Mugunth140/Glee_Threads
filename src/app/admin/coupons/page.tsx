@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/toast';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Coupon {
   id: number;
@@ -25,11 +25,7 @@ export default function AdminCouponsPage() {
     expiry_date: '',
   });
 
-  useEffect(() => {
-    fetchCoupons();
-  }, []);
-
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/admin/coupons', {
@@ -46,7 +42,11 @@ export default function AdminCouponsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchCoupons();
+  }, [fetchCoupons]);
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +72,7 @@ export default function AdminCouponsPage() {
         showToast(data.error || 'Failed to create coupon', { type: 'error' });
       }
     } catch (error) {
+      console.error('Error creating coupon:', error);
       showToast('Error creating coupon', { type: 'error' });
     } finally {
       setSaving(false);
@@ -91,6 +92,7 @@ export default function AdminCouponsPage() {
         showToast('Coupon deleted', { type: 'info' });
       }
     } catch (error) {
+      console.error('Error deleting coupon:', error);
       showToast('Error deleting coupon', { type: 'error' });
     }
   };

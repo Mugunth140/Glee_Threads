@@ -1,10 +1,10 @@
 'use client';
 
+import { compressImage } from '@/lib/image-compression';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
-import { compressImage } from '@/lib/image-compression';
+import { useEffect, useRef, useState } from 'react';
 
 interface Category {
   id: number;
@@ -321,7 +321,7 @@ export default function NewProductPage() {
                     disabled={uploading}
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-black hover:file:bg-gray-200"
                   />
-                  {uploading && <span className="text-sm text-gray-500">Uploading...</span>}
+                  {uploading && <span className="text-sm text-gray-500">{uploadStatus || 'Uploading...'}</span>}
                 </div>
                 
                 {/* Hidden input to ensure URL is submitted if manually edited (optional, but we focus on upload) */}

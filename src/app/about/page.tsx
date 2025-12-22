@@ -50,12 +50,7 @@ export default function AboutPage() {
     },
   ];
 
-  const team = [
-    { name: 'Alex Chen', role: 'Founder & CEO', image: '/team/alex.jpg' },
-    { name: 'Sarah Johnson', role: 'Creative Director', image: '/team/sarah.jpg' },
-    { name: 'Mike Williams', role: 'Head of Production', image: '/team/mike.jpg' },
-    { name: 'Emily Davis', role: 'Customer Success', image: '/team/emily.jpg' },
-  ];
+
 
   return (
     <div className="min-h-screen bg-white">

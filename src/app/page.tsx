@@ -1,9 +1,9 @@
 'use client';
+import showToast from '@/lib/toast';
 import { Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import showToast from '@/lib/toast';
 
 // Format price in Indian Rupees
 const formatPrice = (price: number) => {
@@ -54,6 +54,7 @@ export default function Home() {
         showToast(data.error || 'Failed to subscribe', { type: 'error' });
       }
     } catch (error) {
+      console.error('Subscribe error:', error);
       showToast('Something went wrong', { type: 'error' });
     } finally {
       setSubscribing(false);

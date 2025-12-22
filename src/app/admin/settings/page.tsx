@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Product {
   id: number;
@@ -77,14 +77,9 @@ export default function AdminSettingsPage() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      
 
       // Fetch featured products
       const featuredRes = await fetch('/api/admin/featured-products', {
@@ -118,7 +113,7 @@ export default function AdminSettingsPage() {
       if (settingsRes.ok) {
         const data = await settingsRes.json();
         if (data.settings) {
-          const parseBool = (v: any) => {
+          const parseBool = (v: unknown) => {
             if (v === true || v === 'true' || v === 1 || v === '1') return true;
             return false;
           };
@@ -144,9 +139,11 @@ export default function AdminSettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const addToFeatured = async (productId: number) => {
     try {

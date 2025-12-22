@@ -92,13 +92,19 @@ export default function NavbarClient() {
               </svg>
             </button>
 
-            {/* Left - About, FAQs (Desktop) */}
+            {/* Left - About, FAQs, Contact, Size Guide (Desktop) */}
             <div className="hidden lg:flex items-center gap-6">
               <Link href="/about" className="text-sm text-gray-700 hover:text-primary transition-colors">
                 About
               </Link>
               <Link href="/faqs" className="text-sm text-gray-700 hover:text-primary transition-colors">
                 FAQs
+              </Link>
+              <Link href="/contact" className="text-sm text-gray-700 hover:text-primary transition-colors">
+                Contact
+              </Link>
+              <Link href="/size-guide" className="text-sm text-gray-700 hover:text-primary transition-colors">
+                Size Guide
               </Link>
             </div>
 
@@ -177,6 +183,8 @@ export default function NavbarClient() {
                 <Link href="/products" className="px-4 py-3 text-black font-semibold rounded-xl hover:bg-gray-50 transition-colors">All Products</Link>
                 <Link href="/about" className="px-4 py-3 text-black font-semibold rounded-xl hover:bg-gray-50 transition-colors">About Us</Link>
                 <Link href="/faqs" className="px-4 py-3 text-black font-semibold rounded-xl hover:bg-gray-50 transition-colors">FAQs</Link>
+                <Link href="/contact" className="px-4 py-3 text-black font-semibold rounded-xl hover:bg-gray-50 transition-colors">Contact</Link>
+                <Link href="/size-guide" className="px-4 py-3 text-black font-semibold rounded-xl hover:bg-gray-50 transition-colors">Size Guide</Link>
                 <Link href="/checkout" className="px-4 py-3 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-colors flex items-center justify-between">
                   Checkout
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>

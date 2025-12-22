@@ -79,12 +79,12 @@ export async function GET(
               return { size_name: String(row.size), size_id: Number(row.id), quantity: Number(row.stock), sku: '' };
             })
           : [];
-      } catch (err: any) {
+      } catch (err: unknown) {
         // If the table is missing, avoid printing the full stack — just warn and continue
-        if (err && err.code === 'ER_NO_SUCH_TABLE') {
+        if (typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'ER_NO_SUCH_TABLE') {
           console.warn('product_sizes table missing; skipping size lookup');
         } else {
-          console.warn('Could not fetch product sizes from product_sizes table:', err?.message || err);
+          console.warn('Could not fetch product sizes from product_sizes table:', (err as { message?: string })?.message || err);
         }
         // leave sizesWithNames as-is (empty)
       }
@@ -105,11 +105,11 @@ export async function GET(
         [productId]
       );
       colors = Array.isArray(colorRows) ? (colorRows as { color_hex: string }[]).map(r => r.color_hex) : [];
-    } catch (err: any) {
-      if (err && err.code === 'ER_NO_SUCH_TABLE') {
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'ER_NO_SUCH_TABLE') {
         console.warn('product_colors table missing; skipping color lookup');
       } else {
-        console.warn('Could not fetch product colors:', err?.message || err);
+        console.warn('Could not fetch product colors:', (err as { message?: string })?.message || err);
       }
       colors = [];
     }

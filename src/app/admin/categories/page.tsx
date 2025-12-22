@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Category {
   id: number;
@@ -28,11 +28,7 @@ export default function AdminCategoriesPage() {
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/admin/categories', {
@@ -57,7 +53,11 @@ export default function AdminCategoriesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const openModal = (category?: Category) => {
     if (category) {

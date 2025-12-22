@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     try {
       await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50) NULL`);
       await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_percent INT NULL`);
-    } catch (err) {
+    } catch {
       // ignore - columns may already exist or DB may not support IF NOT EXISTS, non-fatal
     }
 

@@ -270,9 +270,11 @@ export default function CheckoutPage() {
       } catch {
         // ignore
       }
+      const data = await res.json().catch(() => ({}));
+      const orderId = (data && (data.order_id || data.orderId)) || null;
       showToast('Order placed — thank you!', { type: 'success' });
       // Redirect to success page for consistent desktop/mobile UX
-      router.replace(`/checkout/success?orderId=${orderId}`);
+      router.replace(`/checkout/success${orderId ? `?orderId=${orderId}` : ''}`);
     } catch (err) {
       console.error('Error placing order:', err);
       showToast('Failed to place order', { type: 'error' });

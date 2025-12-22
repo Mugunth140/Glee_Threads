@@ -1,6 +1,6 @@
 import pool from '@/lib/db';
 import jwt from 'jsonwebtoken';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -45,8 +45,9 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json({ message: 'Coupon created successfully', couponId: result.insertId }, { status: 201 });
-  } catch (error: any) {
-    if (error.code === 'ER_DUP_ENTRY') {
+  } catch (error: unknown) {
+    // Check for duplicate entry error code safely
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'ER_DUP_ENTRY') {
       return NextResponse.json({ error: 'Coupon code already exists' }, { status: 400 });
     }
     console.error('Error creating coupon:', error);

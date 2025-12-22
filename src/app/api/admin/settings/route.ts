@@ -5,6 +5,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+type RawSettings = Record<string, string | undefined>;
+
+type AdminSettings = {
+  shipping_fee: number;
+  free_shipping_threshold: number;
+  gst_percentage: number;
+  gst_enabled: boolean;
+} & Record<string, string | number | boolean>;
+
 function verifyAdmin(request: NextRequest): boolean {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
@@ -28,13 +37,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Provide typed settings for admin UI convenience
-    const settings = {
-      ...raw,
-      shipping_fee: raw.shipping_fee ? Number(raw.shipping_fee) : 99,
-      free_shipping_threshold: raw.free_shipping_threshold ? Number(raw.free_shipping_threshold) : 999,
-      gst_percentage: raw.gst_percentage ? Number(raw.gst_percentage) : 18,
-      gst_enabled: (typeof raw.gst_enabled !== 'undefined') ? (raw.gst_enabled === '1' || raw.gst_enabled === 'true') : true,
-    } as Record<string, any>;
+    const settingsBase: RawSettings = { ...raw };
+    const settings: AdminSettings = {
+      ...settingsBase,
+      shipping_fee: settingsBase.shipping_fee ? Number(settingsBase.shipping_fee) : 99,
+      free_shipping_threshold: settingsBase.free_shipping_threshold ? Number(settingsBase.free_shipping_threshold) : 999,
+      gst_percentage: settingsBase.gst_percentage ? Number(settingsBase.gst_percentage) : 18,
+      gst_enabled: (typeof settingsBase.gst_enabled !== 'undefined') ? (settingsBase.gst_enabled === '1' || settingsBase.gst_enabled === 'true') : true,
+    };
 
     return NextResponse.json({ settings });
   } catch (error) {
@@ -61,13 +71,14 @@ export async function PUT(request: NextRequest) {
     const [rows] = await pool.query<RowDataPacket[]>('SELECT setting_key, setting_value FROM store_settings');
     const raw: Record<string, string> = {};
     rows.forEach(row => { raw[row.setting_key] = row.setting_value; });
-    const settings = {
-      ...raw,
-      shipping_fee: raw.shipping_fee ? Number(raw.shipping_fee) : 99,
-      free_shipping_threshold: raw.free_shipping_threshold ? Number(raw.free_shipping_threshold) : 999,
-      gst_percentage: raw.gst_percentage ? Number(raw.gst_percentage) : 18,
-      gst_enabled: (typeof raw.gst_enabled !== 'undefined') ? (raw.gst_enabled === '1' || raw.gst_enabled === 'true') : true,
-    } as Record<string, any>;
+    const settingsBase: RawSettings = { ...raw };
+    const settings: AdminSettings = {
+      ...settingsBase,
+      shipping_fee: settingsBase.shipping_fee ? Number(settingsBase.shipping_fee) : 99,
+      free_shipping_threshold: settingsBase.free_shipping_threshold ? Number(settingsBase.free_shipping_threshold) : 999,
+      gst_percentage: settingsBase.gst_percentage ? Number(settingsBase.gst_percentage) : 18,
+      gst_enabled: (typeof settingsBase.gst_enabled !== 'undefined') ? (settingsBase.gst_enabled === '1' || settingsBase.gst_enabled === 'true') : true,
+    };
 
     return NextResponse.json({ settings });
   } catch (error) {
