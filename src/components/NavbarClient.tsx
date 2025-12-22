@@ -103,9 +103,9 @@ export default function NavbarClient() {
               <Link href="/contact" className="text-sm text-gray-700 hover:text-primary transition-colors">
                 Contact
               </Link>
-              <Link href="/size-guide" className="text-sm text-gray-700 hover:text-primary transition-colors">
+              {/* <Link href="/size-guide" className="text-sm text-gray-700 hover:text-primary transition-colors">
                 Size Guide
-              </Link>
+              </Link> */}
             </div>
 
             {/* Center - Logo */}

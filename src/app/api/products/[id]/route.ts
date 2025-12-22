@@ -79,6 +79,23 @@ export async function GET(
               return { size_name: String(row.size), size_id: Number(row.id), quantity: Number(row.stock), sku: '' };
             })
           : [];
+
+        // If we found sizes in the product_sizes table, persist them back to products.sizes
+        if (sizesWithNames.length > 0) {
+          try {
+            const names = sizesWithNames.map(s => s.size_name);
+            // Ensure sizes column exists (best-effort)
+            try {
+              await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes JSON`);
+            } catch (alterErr) {
+              console.warn('Could not ensure sizes column exists when backfilling:', alterErr);
+            }
+            await pool.query('UPDATE products SET sizes = ? WHERE id = ?', [JSON.stringify(names), productId]);
+            console.info(`Backfilled sizes for product ${productId}: [${names.join(', ')}]`);
+          } catch (writeErr) {
+            console.warn('Failed to backfill sizes onto product row:', writeErr);
+          }
+        }
       } catch (err: unknown) {
         // If the table is missing, avoid printing the full stack — just warn and continue
         if (typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'ER_NO_SUCH_TABLE') {

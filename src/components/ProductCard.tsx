@@ -15,9 +15,16 @@ export default function ProductCard({ product }: ProductCardProps) {
             src={product.image_url}
             alt={product.name}
             fill
-            className="object-cover"
+            className={`object-cover transition-opacity duration-200 ${product.is_out_of_stock ? 'opacity-60 grayscale' : ''}`}
             unoptimized
           />
+
+          {/* Out of stock badge */}
+          {product.is_out_of_stock && (
+            <div className="absolute left-3 top-3 bg-red-700 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-lg">
+              Out of stock
+            </div>
+          )}
         </div>
         <div className="p-4">
           <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-1">

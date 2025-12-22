@@ -37,23 +37,49 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [products] = await pool.query<RowDataPacket[]>(`
-      SELECT 
-        p.id,
-        p.name,
-        p.description,
-        p.price,
-        p.image_url,
-        p.category_id,
-        c.name as category_name,
-        p.created_at,
-        CASE WHEN p.is_featured = 1 THEN true ELSE false END as is_featured
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      ORDER BY p.created_at DESC
-    `);
+    // Some DBs might not have the `is_out_of_stock` column yet. Try the full query first and
+    // fall back to a query without that column if it fails.
+    try {
+      const [products] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          p.id,
+          p.name,
+          p.description,
+          p.price,
+          p.image_url,
+          p.category_id,
+          c.name as category_name,
+          p.created_at,
+          CASE WHEN p.is_featured = 1 THEN true ELSE false END as is_featured,
+          CASE WHEN p.is_out_of_stock = 1 THEN true ELSE false END as is_out_of_stock
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        ORDER BY p.created_at DESC
+      `);
 
-    return NextResponse.json({ products });
+      return NextResponse.json({ products });
+    } catch (e) {
+      console.warn('Products query with is_out_of_stock failed, retrying without that column:', (e as Error).message);
+      const [products] = await pool.query<RowDataPacket[]>(`
+        SELECT 
+          p.id,
+          p.name,
+          p.description,
+          p.price,
+          p.image_url,
+          p.category_id,
+          c.name as category_name,
+          p.created_at,
+          CASE WHEN p.is_featured = 1 THEN true ELSE false END as is_featured
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        ORDER BY p.created_at DESC
+      `);
+
+      // Ensure each product has the field for client convenience
+      const typed = (products as Array<RowDataPacket & { is_out_of_stock?: unknown }>).map(p => ({ ...p, is_out_of_stock: false }));
+      return NextResponse.json({ products: typed });
+    }
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
@@ -104,7 +130,12 @@ export async function POST(request: NextRequest) {
     if (sizes && Array.isArray(sizes)) {
       try {
         const clean: string[] = sizes.map((s: unknown) => String(s).trim()).filter((s: string) => s.length > 0);
-        // Attempt to update the product row with JSON sizes. If the column doesn't exist, catch and log.
+        // Ensure column exists to avoid silent failures on older DBs
+        try {
+          await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes JSON`);
+        } catch (alterErr) {
+          console.warn('Could not ensure sizes column exists (may be older MySQL):', alterErr);
+        }
         await pool.query('UPDATE products SET sizes = ? WHERE id = ?', [JSON.stringify(clean), productId]);
       } catch (e) {
         console.error('Failed to persist product sizes on product row', e);

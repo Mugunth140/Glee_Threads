@@ -22,7 +22,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   const [isLoading, setIsLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
@@ -127,8 +127,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  // Mock additional images (in a real app, these would come from the API)
-  const productImages = [product.image_url, product.image_url, product.image_url];
+  // Single main image (thumbnails removed)
+  const productImages = [product.image_url];
 
   return (
     <div className="min-h-screen bg-white">
@@ -151,7 +151,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {/* Main Image */}
             <div className="relative aspect-4/5 rounded-2xl overflow-hidden bg-gray-100">
               <Image
-                src={productImages[selectedImageIndex]}
+                src={product.image_url}
                 alt={product.name}
                 fill
                 className="object-cover"
@@ -159,22 +159,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               />
             </div>
             
-            {/* Thumbnail Gallery */}
-            <div className="flex gap-3">
-              {productImages.map((img, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImageIndex(index)}
-                  className={`relative w-20 h-24 rounded-xl overflow-hidden bg-gray-100 transition-all ${
-                    selectedImageIndex === index 
-                      ? 'ring-2 ring-black' 
-                      : 'opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <Image src={img} alt="" fill className="object-cover" unoptimized />
-                </button>
-              ))}
-            </div>
+
           </div>
 
           {/* Product Details */}
@@ -187,9 +172,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             )}
             
             {/* Title & Price */}
-            <div>
-              <h1 className="text-3xl font-semibold text-black mb-2">{product.name}</h1>
-              <p className="text-2xl font-semibold text-black">{formatPrice(Number(product.price))}</p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-semibold text-black mb-2">{product.name}</h1>
+                <p className="text-2xl font-semibold text-black">{formatPrice(Number(product.price))}</p>
+              </div>
+
+              {product.is_out_of_stock && (
+                <div className="ml-2">
+                  <span className="inline-block bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">Out of stock</span>
+                </div>
+              )}
             </div>
 
             {/* Delivery timing removed */}
@@ -246,13 +239,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={handleAddToCart}
                 disabled={
-                  // If the product has size variants, require a size to be selected
-                  (product.sizes && product.sizes.length > 0 && !selectedSize) ||
-                  addingToCart
+                  // Disable if out of stock or if the product has size variants and no size selected
+                  !!product.is_out_of_stock || (product.sizes && product.sizes.length > 0 && !selectedSize) || addingToCart
                 }
                 className="flex-1 bg-primary text-white py-4 rounded-full text-sm font-semibold hover:bg-primary-hover transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                {addingToCart ? 'Adding...' : 'Add to Cart'}
+                {product.is_out_of_stock ? 'Out of stock' : (addingToCart ? 'Adding...' : 'Add to Cart')}
               </button>
             </div>
 

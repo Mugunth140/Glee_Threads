@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backfill:sizes": "node scripts/backfill-sizes.js",
+    "refactor:sizes": "node scripts/refactor-sizes.js",
+    "seed:products": "node scripts/seed-products.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.0.0",

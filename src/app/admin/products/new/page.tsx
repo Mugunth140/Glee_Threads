@@ -30,6 +30,8 @@ export default function NewProductPage() {
     material: '',
     care_instructions: ''
   });
+
+  const [isOutOfStock, setIsOutOfStock] = useState(false);
   
   // Selected size options (no per-size stock here)
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
@@ -105,7 +107,8 @@ export default function NewProductPage() {
             price: parseFloat(formData.price),
             category_id: parseInt(formData.category_id),
             sizes: selectedSizes,
-            colors: colors
+            colors: colors,
+            is_out_of_stock: isOutOfStock
         })
       });
 
@@ -234,6 +237,18 @@ export default function NewProductPage() {
                     placeholder="e.g., 100% Cotton"
                   />
                 </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    id="is-out-of-stock"
+                    type="checkbox"
+                    checked={isOutOfStock}
+                    onChange={(e) => setIsOutOfStock(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="is-out-of-stock" className="text-sm text-gray-700">Mark product as <strong>Out of stock</strong></label>
+                </div>
+
               </div>
             </div>
 

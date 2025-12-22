@@ -162,6 +162,12 @@ export async function PUT(
     if (Array.isArray(sizes)) {
       try {
         const clean: string[] = sizes.map((s: unknown) => String(s).trim()).filter((s: string) => s.length > 0);
+        // Ensure column exists before updating (best-effort)
+        try {
+          await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes JSON`);
+        } catch (alterErr) {
+          console.warn('Could not ensure sizes column exists (may be older MySQL):', alterErr);
+        }
         await pool.query('UPDATE products SET sizes = ? WHERE id = ?', [JSON.stringify(clean), id]);
       } catch (e) {
         console.error('Failed to persist product sizes on product row', e);

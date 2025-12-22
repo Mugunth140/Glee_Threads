@@ -32,6 +32,11 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Pagination for load more (server-side)
+  const PAGE_SIZE = 12;
+  const [page, setPage] = useState<number>(1);
+  const [totalProducts, setTotalProducts] = useState<number>(0);
+
   const styles = ['Graphic', 'Plain', 'Oversized', 'Premium', 'Custom'];
   const PRICE_RANGES = [
     { key: 'under-999', label: 'Under ₹999', min: 0, max: 998 },
@@ -50,7 +55,7 @@ export default function ProductsPage() {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (requestedPage = 1, append = false) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -58,24 +63,23 @@ export default function ProductsPage() {
       if (selectedStyle) params.set('style', selectedStyle);
       if (sortBy) params.set('sort', sortBy);
       if (searchQuery) params.set('search', searchQuery);
-      const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`;
-      console.debug('Fetching products from', url, { selectedCategory, selectedStyle, sortBy, searchQuery });
+      params.set('page', String(requestedPage));
+      params.set('pageSize', String(PAGE_SIZE));
+      const url = `/api/products?${params.toString()}`;
+      console.debug('Fetching products from', url, { selectedCategory, selectedStyle, sortBy, searchQuery, requestedPage });
       const response = await fetch(url);
-      console.debug('Products API response status:', response.status, response.ok);
       const data = await response.json();
-      // Normalize response: API should return an array, but sometimes it may be wrapped
-      const possible = data as unknown;
+
+      // Expected response: { products: [], total, page, pageSize }
       let items: Product[] = [];
-      if (Array.isArray(possible)) items = possible as Product[];
-      else if (possible && typeof possible === 'object') {
-        const wrapped = possible as { products?: unknown };
-        if (Array.isArray(wrapped.products)) items = wrapped.products as Product[];
-      }
+      if (data && Array.isArray(data.products)) items = data.products as Product[];
+      else if (Array.isArray(data)) items = data as Product[];
+
       if (!Array.isArray(items)) {
         console.warn('Unexpected products response:', data);
         items = [];
       }
-      console.debug('Products fetched, count:', items.length);
+
       // Only include products that are visible. If API provides `is_visible` use it,
       // otherwise fall back to `is_active`.
       const visible = items.filter((p) => {
@@ -97,7 +101,6 @@ export default function ProductsPage() {
         // Size filter
         if (selectedSizeFilter) {
           const sizes = p.sizes || [];
-          // sizes may be array of objects or strings; normalize to uppercase names
           const names = Array.isArray(sizes)
             ? sizes
                 .map((s: unknown) => (typeof s === 'string' ? String(s) : ((s as { size_name?: string })?.size_name ?? String(s))))
@@ -109,7 +112,20 @@ export default function ProductsPage() {
         return true;
       });
 
-      setProducts(filtered);
+      if (append) {
+        setProducts(prev => [...prev, ...filtered]);
+      } else {
+        setProducts(filtered);
+      }
+
+      // Update pagination metadata if present
+      if (data && typeof data.total === 'number') {
+        setTotalProducts(data.total);
+      } else {
+        setTotalProducts(prev => append ? prev : filtered.length);
+      }
+
+      setPage(requestedPage);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -141,7 +157,10 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
-    fetchProducts();
+    // Reset to first page when filters/search change
+    setProducts([]);
+    setPage(1);
+    fetchProducts(1, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter, searchQuery]);
 
@@ -151,7 +170,7 @@ export default function ProductsPage() {
       <div className="border-b border-gray-100">
         <div className="container mx-auto px-4 lg:px-8 py-12">
           <span className="inline-block px-4 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-600 mb-4">
-            {products.length} Products
+            {totalProducts} Products
           </span>
           <h1 className="text-4xl md:text-5xl font-bold text-black mb-4">
             Our Collection
@@ -373,9 +392,12 @@ export default function ProductsPage() {
         )}
 
         {/* Load More */}
-        {products.length > 0 && (
+        {products.length < totalProducts && (
           <div className="text-center mt-12">
-            <button className="px-8 py-4 border border-gray-200 rounded-full text-sm font-semibold text-black hover:border-gray-600 transition-colors">
+            <button
+              onClick={() => fetchProducts(page + 1, true)}
+              className="px-8 py-4 border border-gray-200 rounded-full text-sm font-semibold text-black hover:border-gray-600 transition-colors"
+            >
               Load More Products
             </button>
           </div>

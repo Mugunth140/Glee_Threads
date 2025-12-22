@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add sizes (hardcoded, available if not out of stock)
+    // Add sizes (available if not out of stock). Prefer sizes stored on product row, fallback to inventory table.
     const productsWithSizes = (productsRows as Array<{
       id: number;
       name: string;
@@ -114,8 +114,15 @@ export async function GET(request: NextRequest) {
           if (sizes.length === 0 && inventoryMap[product.id]) {
             sizes = inventoryMap[product.id];
           }
-        } catch {
+        } catch (e) {
+          // Parsing failed; log a concise warning so we can detect intermittent parsing errors.
+          console.warn(`Failed to parse sizes for product ${product.id}:`, (e as Error).message || e);
           sizes = [];
+        }
+
+        // If after parsing and inventory fallback we still have no sizes, log a trace so admin can investigate
+        if (sizes.length === 0) {
+          console.debug(`Product ${product.id} has no sizes in product row or inventory`);
         }
       }
       return {

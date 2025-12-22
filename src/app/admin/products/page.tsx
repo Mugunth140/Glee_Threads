@@ -14,6 +14,7 @@ interface Product {
   category_id: number;
   category_name: string;
   is_featured: boolean;
+  is_out_of_stock?: boolean;
   created_at: string;
 }
 
@@ -31,6 +32,8 @@ export default function AdminProductsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Track product IDs currently updating stock to show spinner and disable the button
+  const [stockUpdatingIds, setStockUpdatingIds] = useState<number[]>([]);
   const router = useRouter();
 
   // initial load will run after fetch functions are defined
@@ -139,6 +142,39 @@ export default function AdminProductsPage() {
     }
   };
 
+  const toggleOutOfStock = async (productId: number, isOutOfStock: boolean) => {
+    // Optimistic update with per-item spinner
+    setStockUpdatingIds(prev => Array.from(new Set([...prev, productId])));
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, is_out_of_stock: !isOutOfStock } : p));
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/admin/products/${productId}/stock`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ is_out_of_stock: !isOutOfStock })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        // Revert optimistic update
+        setProducts(prev => prev.map(p => p.id === productId ? { ...p, is_out_of_stock: isOutOfStock } : p));
+        console.error('Failed to update stock status', err);
+        alert(err.error || 'Failed to update stock status');
+      }
+    } catch (error) {
+      // Revert optimistic update on error
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, is_out_of_stock: isOutOfStock } : p));
+      console.error('Error toggling stock status:', error);
+      alert('Failed to update stock status');
+    } finally {
+      setStockUpdatingIds(prev => prev.filter(id => id !== productId));
+    }
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category_id.toString() === selectedCategory;
@@ -214,6 +250,7 @@ export default function AdminProductsPage() {
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Category</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Price</th>
                 <th className="text-center px-6 py-4 text-sm font-medium text-gray-500">Featured</th>
+                <th className="text-center px-6 py-4 text-sm font-medium text-gray-500">Stock</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
@@ -274,6 +311,30 @@ export default function AdminProductsPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                         </svg>
                       </button>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => toggleOutOfStock(product.id, !!product.is_out_of_stock)}
+                          aria-pressed={!!product.is_out_of_stock}
+                          aria-label={product.is_out_of_stock ? `Mark ${product.name} as in stock` : `Mark ${product.name} as out of stock`}
+                          title={product.is_out_of_stock ? 'Mark as in stock' : 'Mark as out of stock'}
+                          className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 ${product.is_out_of_stock ? 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-300' : 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300'}`}
+                          disabled={stockUpdatingIds.includes(product.id)}
+                        >
+                          {stockUpdatingIds.includes(product.id) ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" aria-hidden="true"></div>
+                          ) : product.is_out_of_stock ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
