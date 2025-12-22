@@ -34,12 +34,15 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState<number>(1);
+  const [pageSize] = useState<number>(20);
+  const [totalOrders, setTotalOrders] = useState<number>(0);
   const router = useRouter();
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (requestedPage = 1) => {
     try {
       const token = localStorage.getItem('adminToken');
-      const res = await fetch('/api/admin/orders', {
+      const res = await fetch(`/api/admin/orders?page=${requestedPage}&pageSize=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -55,17 +58,19 @@ export default function AdminOrdersPage() {
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
+        setTotalOrders(typeof data.total === 'number' ? data.total : 0);
+        setPage(typeof data.page === 'number' ? data.page : requestedPage);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, pageSize]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    fetchOrders(page);
+  }, [fetchOrders, page]);
 
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     try {
@@ -109,6 +114,14 @@ export default function AdminOrdersPage() {
     ? orders 
     : orders.filter(o => o.status.toLowerCase() === statusFilter);
 
+  const totalPages = Math.max(1, Math.ceil((totalOrders || 0) / pageSize));
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages) return;
+    setPage(p);
+    setLoading(true);
+    fetchOrders(p);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -133,6 +146,19 @@ export default function AdminOrdersPage() {
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
+
+      {/* Pagination Top */}
+      {totalOrders > pageSize && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-gray-500">Showing page {page} of {totalPages} — {totalOrders} orders</div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => goToPage(page - 1)} disabled={page <= 1} className={`px-3 py-1 rounded-md border ${page <= 1 ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Prev</button>
+            <span className="text-sm">Page</span>
+            <input type="number" min={1} max={totalPages} value={page} onChange={(e) => goToPage(Number(e.target.value) || 1)} className="w-16 text-center border rounded px-2 py-1" />
+            <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages} className={`px-3 py-1 rounded-md border ${page >= totalPages ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Next</button>
+          </div>
+        </div>
+      )}
 
       {/* Orders Table */}
       <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
@@ -217,6 +243,27 @@ export default function AdminOrdersPage() {
           </table>
         </div>
       </div>
+
+      {/* Pagination Bottom */}
+      {totalOrders > pageSize && (
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-sm text-gray-500">Showing page {page} of {totalPages}</div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => goToPage(page - 1)} disabled={page <= 1} className={`px-3 py-1 rounded-md border ${page <= 1 ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Prev</button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                const start = Math.max(1, page - 3);
+                const p = start + i;
+                if (p > totalPages) return null;
+                return (
+                  <button key={p} onClick={() => goToPage(p)} className={`px-3 py-1 rounded-md ${p === page ? 'bg-primary text-white' : 'border border-gray-300 hover:bg-gray-100'}`}>{p}</button>
+                );
+              })}
+            </div>
+            <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages} className={`px-3 py-1 rounded-md border ${page >= totalPages ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Next</button>
+          </div>
+        </div>
+      )}
 
       {/* Order Detail Modal */}
       {selectedOrder && (

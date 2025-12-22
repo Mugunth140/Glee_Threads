@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
     // Check if orders table exists
     const [tables] = await pool.query<RowDataPacket[]>(
       "SHOW TABLES LIKE 'orders'"
@@ -85,6 +86,16 @@ export async function GET(request: NextRequest) {
       // ignore - columns may already exist or DB may not support IF NOT EXISTS, non-fatal
     }
 
+    // Pagination
+    const page = Number(searchParams.get('page') || '1') || 1;
+    const pageSize = Number(searchParams.get('pageSize') || '20') || 20;
+
+    // Count total orders
+    const [countRows] = await pool.query<RowDataPacket[]>(`SELECT COUNT(*) as total FROM orders`);
+    const total = Array.isArray(countRows) && (countRows[0] as any)?.total ? Number((countRows[0] as any).total) : 0;
+
+    const offset = (page - 1) * pageSize;
+
     const [orders] = await pool.query<RowDataPacket[]>(`
       SELECT 
         o.id,
@@ -98,13 +109,17 @@ export async function GET(request: NextRequest) {
         o.created_at
       FROM orders o
       ORDER BY o.created_at DESC
-    `);
+      LIMIT ? OFFSET ?
+    `, [pageSize, offset]);
 
-    // Get items for each order
-    for (const order of orders) {
-      const [items] = await pool.query<RowDataPacket[]>(`
+    // Get items for the returned orders only
+    const orderIds = (orders as Array<RowDataPacket & { id: number }>).map(o => o.id);
+    if (orderIds.length > 0) {
+      const placeholders = orderIds.map(() => '?').join(',');
+      const [itemsRows] = await pool.query<RowDataPacket[]>(`
         SELECT 
           oi.id,
+          oi.order_id,
           COALESCE(p.name, 'Custom Design') as product_name,
           oi.quantity,
           oi.size,
@@ -114,12 +129,23 @@ export async function GET(request: NextRequest) {
           oi.custom_text
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.id
-        WHERE oi.order_id = ?
-      `, [order.id]);
-      order.items = items;
+        WHERE oi.order_id IN (${placeholders})
+      `, orderIds);
+
+      const itemsByOrder: Record<number, any[]> = {};
+      for (const it of itemsRows as RowDataPacket[]) {
+        itemsByOrder[it.order_id] = itemsByOrder[it.order_id] || [];
+        itemsByOrder[it.order_id].push(it);
+      }
+
+      for (const order of orders) {
+        order.items = itemsByOrder[order.id] || [];
+      }
+    } else {
+      for (const order of orders) order.items = [];
     }
 
-    return NextResponse.json({ orders });
+    return NextResponse.json({ orders, total, page, pageSize });
   } catch (error) {
     console.error('Error fetching orders:', error);
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });

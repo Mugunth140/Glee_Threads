@@ -37,9 +37,20 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
     // Some DBs might not have the `is_out_of_stock` column yet. Try the full query first and
     // fall back to a query without that column if it fails.
+    // Pagination
+    const page = Number(searchParams.get('page') || '1') || 1;
+    const pageSize = Number(searchParams.get('pageSize') || '20') || 20;
+
     try {
+      // Count total
+      const [countRows] = await pool.query<RowDataPacket[]>(`SELECT COUNT(*) as total FROM products`);
+      const total = Array.isArray(countRows) && (countRows[0] as any)?.total ? Number((countRows[0] as any).total) : 0;
+
+      const offset = (page - 1) * pageSize;
+
       const [products] = await pool.query<RowDataPacket[]>(`
         SELECT 
           p.id,
@@ -55,11 +66,13 @@ export async function GET(request: NextRequest) {
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
         ORDER BY p.created_at DESC
-      `);
+        LIMIT ? OFFSET ?
+      `, [pageSize, offset]);
 
-      return NextResponse.json({ products });
+      return NextResponse.json({ products, total, page, pageSize });
     } catch (e) {
       console.warn('Products query with is_out_of_stock failed, retrying without that column:', (e as Error).message);
+      const offset = (page - 1) * pageSize;
       const [products] = await pool.query<RowDataPacket[]>(`
         SELECT 
           p.id,
@@ -74,11 +87,12 @@ export async function GET(request: NextRequest) {
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
         ORDER BY p.created_at DESC
-      `);
+        LIMIT ? OFFSET ?
+      `, [pageSize, offset]);
 
       // Ensure each product has the field for client convenience
       const typed = (products as Array<RowDataPacket & { is_out_of_stock?: unknown }>).map(p => ({ ...p, is_out_of_stock: false }));
-      return NextResponse.json({ products: typed });
+      return NextResponse.json({ products: typed, total: 0, page, pageSize });
     }
   } catch (error) {
     console.error('Error fetching products:', error);

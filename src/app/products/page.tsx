@@ -137,18 +137,51 @@ export default function ProductsPage() {
     fetchCategories();
   }, []);
 
+  // Update the browser URL with current filters and page
+  const updateUrlWithParams = (requestedPage: number) => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (selectedCategory) params.set('category', selectedCategory);
+      else params.delete('category');
+      if (searchQuery) params.set('search', searchQuery);
+      else params.delete('search');
+      params.set('page', String(requestedPage));
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState(null, '', newUrl);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Navigate to a page (page-based pagination)
+  const goToPage = (requestedPage: number) => {
+    if (requestedPage < 1) return;
+    const totalPages = Math.max(1, Math.ceil((totalProducts || 0) / PAGE_SIZE));
+    if (requestedPage > totalPages) return;
+    setProducts([]);
+    setPage(requestedPage);
+    fetchProducts(requestedPage, false);
+    updateUrlWithParams(requestedPage);
+  };
+
   useEffect(() => {
-    // Read category from browser URL on mount and when navigation occurs
+    // Read category and page from browser URL on mount and when navigation occurs
     const readParamsFromUrl = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const category = params.get('category');
         const search = params.get('search');
+        const pageParam = Number(params.get('page') || '1') || 1;
         setSelectedCategory(category || '');
         setSearchQuery(search || '');
+        setPage(pageParam);
+        // Fetch the requested page when navigating via back/forward
+        fetchProducts(pageParam, false);
       } catch {
         setSelectedCategory('');
         setSearchQuery('');
+        setPage(1);
+        fetchProducts(1, false);
       }
     };
     readParamsFromUrl();
@@ -161,6 +194,7 @@ export default function ProductsPage() {
     setProducts([]);
     setPage(1);
     fetchProducts(1, false);
+    updateUrlWithParams(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter, searchQuery]);
 
@@ -391,17 +425,68 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Load More */}
-        {products.length < totalProducts && (
-          <div className="text-center mt-12">
-            <button
-              onClick={() => fetchProducts(page + 1, true)}
-              className="px-8 py-4 border border-gray-200 rounded-full text-sm font-semibold text-black hover:border-gray-600 transition-colors"
-            >
-              Load More Products
-            </button>
-          </div>
-        )}
+        {/* Pagination (page-based) */}
+        {(() => {
+          const totalPages = Math.max(1, Math.ceil((totalProducts || 0) / PAGE_SIZE));
+          if (totalPages <= 1) return null;
+
+          // Determine visible window of pages (max 7)
+          const maxVisible = 7;
+          let start = Math.max(1, page - Math.floor(maxVisible / 2));
+          let end = Math.min(totalPages, start + maxVisible - 1);
+          if (end - start + 1 < maxVisible) {
+            start = Math.max(1, end - maxVisible + 1);
+          }
+
+          const pages = [];
+          for (let p = start; p <= end; p++) pages.push(p);
+
+          return (
+            <div className="flex items-center justify-center mt-12 gap-3">
+              <button
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className={`px-4 py-2 rounded-full border ${page <= 1 ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'} transition-colors`}
+              >
+                Prev
+              </button>
+
+              <div className="flex items-center gap-2">
+                {start > 1 && (
+                  <>
+                    <button onClick={() => goToPage(1)} className="px-3 py-2 rounded-full border border-gray-300 text-black hover:bg-gray-100">1</button>
+                    {start > 2 && <span className="px-2 text-gray-400">…</span>}
+                  </>
+                )}
+
+                {pages.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => goToPage(p)}
+                    className={`px-3 py-2 rounded-full border ${p === page ? 'bg-primary text-white border-primary' : 'border-gray-300 text-black hover:bg-gray-100'}`}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                {end < totalPages && (
+                  <>
+                    {end < totalPages - 1 && <span className="px-2 text-gray-400">…</span>}
+                    <button onClick={() => goToPage(totalPages)} className="px-3 py-2 rounded-full border border-gray-300 text-black hover:bg-gray-100">{totalPages}</button>
+                  </>
+                )}
+              </div>
+
+              <button
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className={`px-4 py-2 rounded-full border ${page >= totalPages ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'} transition-colors`}
+              >
+                Next
+              </button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

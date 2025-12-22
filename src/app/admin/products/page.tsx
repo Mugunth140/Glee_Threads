@@ -34,11 +34,15 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState(false);
   // Track product IDs currently updating stock to show spinner and disable the button
   const [stockUpdatingIds, setStockUpdatingIds] = useState<number[]>([]);
+  // Pagination
+  const [page, setPage] = useState<number>(1);
+  const [pageSize] = useState<number>(20);
+  const [totalProducts, setTotalProducts] = useState<number>(0);
   const router = useRouter();
 
   // initial load will run after fetch functions are defined
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (requestedPage = 1) => {
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
@@ -47,7 +51,7 @@ export default function AdminProductsPage() {
         return;
       }
 
-      const res = await fetch('/api/admin/products', {
+      const res = await fetch(`/api/admin/products?page=${requestedPage}&pageSize=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -61,7 +65,9 @@ export default function AdminProductsPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setProducts(data.products);
+        setProducts(Array.isArray(data.products) ? data.products : []);
+        setTotalProducts(typeof data.total === 'number' ? data.total : 0);
+        setPage(typeof data.page === 'number' ? data.page : requestedPage);
       } else {
         const err = await res.json().catch(() => ({}));
         console.error('Failed to fetch admin products:', err);
@@ -71,7 +77,7 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, pageSize]);
 
   const fetchCategories = async () => {
     try {
@@ -87,9 +93,9 @@ export default function AdminProductsPage() {
   };
 
     useEffect(() => {
-      fetchProducts();
+      fetchProducts(page);
       fetchCategories();
-    }, [fetchProducts]);
+    }, [fetchProducts, page]);
 
   const handleDelete = async () => {
     if (!productToDelete) return;
@@ -181,6 +187,15 @@ export default function AdminProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const totalPages = Math.max(1, Math.ceil((totalProducts || 0) / pageSize));
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages) return;
+    setPage(p);
+    setLoading(true);
+    fetchProducts(p);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -206,6 +221,18 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Filters */}
+      {/* Pagination Top */}
+      {totalProducts > pageSize && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-gray-500">Showing page {page} of {totalPages} — {totalProducts} products</div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => goToPage(page - 1)} disabled={page <= 1} className={`px-3 py-1 rounded-md border ${page <= 1 ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Prev</button>
+            <span className="text-sm">Page</span>
+            <input type="number" min={1} max={totalPages} value={page} onChange={(e) => goToPage(Number(e.target.value) || 1)} className="w-16 text-center border rounded px-2 py-1" />
+            <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages} className={`px-3 py-1 rounded-md border ${page >= totalPages ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Next</button>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <div className="relative">
@@ -368,6 +395,27 @@ export default function AdminProductsPage() {
           </table>
         </div>
       </div>
+
+      {/* Pagination Bottom */}
+      {totalProducts > pageSize && (
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-sm text-gray-500">Showing page {page} of {totalPages}</div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => goToPage(page - 1)} disabled={page <= 1} className={`px-3 py-1 rounded-md border ${page <= 1 ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Prev</button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                const start = Math.max(1, page - 3);
+                const p = start + i;
+                if (p > totalPages) return null;
+                return (
+                  <button key={p} onClick={() => goToPage(p)} className={`px-3 py-1 rounded-md ${p === page ? 'bg-primary text-white' : 'border border-gray-300 hover:bg-gray-100'}`}>{p}</button>
+                );
+              })}
+            </div>
+            <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages} className={`px-3 py-1 rounded-md border ${page >= totalPages ? 'border-gray-200 text-gray-400' : 'border-gray-300 text-black hover:bg-gray-100'}`}>Next</button>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && productToDelete && (

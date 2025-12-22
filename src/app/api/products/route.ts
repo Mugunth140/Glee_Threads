@@ -38,6 +38,10 @@ export async function GET(request: NextRequest) {
       params.push(`%${search}%`, `%${search}%`);
     }
 
+    // Pagination
+    const page = Number(searchParams.get('page') || '1') || 1;
+    const pageSize = Number(searchParams.get('pageSize') || '1000') || 1000; // default to large if not provided
+
     // Sort
     let orderBy = 'p.created_at DESC';
     if (sort === 'price-low') {
@@ -50,19 +54,32 @@ export async function GET(request: NextRequest) {
       // Assuming no popularity field, use created_at
       orderBy = 'p.created_at DESC';
     }
-    query += ` ORDER BY ${orderBy}`;
+
+    // Build count query (same filters)
+    const countQuery = `SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = true` +
+      (category ? ' AND c.slug = ?' : '') +
+      (style ? ' AND c.name LIKE ?' : '') +
+      (search ? ' AND (p.name LIKE ? OR p.description LIKE ?)' : '');
+
+    const [countRows] = await pool.execute<RowDataPacket[]>(countQuery, params);
+    const total = Array.isArray(countRows) && (countRows[0] as any)?.total ? Number((countRows[0] as any).total) : 0;
 
     // Some installations may not have `p.sizes` column yet. Try the full query first
     // and fall back to a safer query if it fails.
     let productsRows: RowDataPacket[] = [];
+
+    // Append order and pagination to query
+    query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
+    const dataParams = [...params, pageSize, (page - 1) * pageSize];
+
     try {
-      const [rows] = await pool.execute<RowDataPacket[]>(query, params);
+      const [rows] = await pool.execute<RowDataPacket[]>(query, dataParams);
       productsRows = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
     } catch (e) {
       console.warn('Products list query failed, retrying without sizes column:', (e as Error).message);
       // remove p.sizes from select (rebuild query to be safe)
       const fallbackQuery = query.replace('p.material, p.care_instructions, p.sizes, p.is_active, p.is_out_of_stock,', 'p.material, p.care_instructions, p.is_active, p.is_out_of_stock,');
-      const [rows] = await pool.execute<RowDataPacket[]>(fallbackQuery, params);
+      const [rows] = await pool.execute<RowDataPacket[]>(fallbackQuery, dataParams);
       productsRows = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
     }
 
@@ -131,7 +148,8 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(productsWithSizes);
+    // Return pagination info along with products
+    return NextResponse.json({ products: productsWithSizes, total, page, pageSize });
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json(

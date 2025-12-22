@@ -132,6 +132,50 @@ export async function GET(request: Request) {
         revenue: Number(r.revenue)
       }));
 
+      // Chart stats: accept a chartRange param for quick ranges (3d,1w,1m)
+      let chartStats: { label: string; revenue: number }[] = [];
+      try {
+        const chartRange = (new URL(request.url)).searchParams.get('chartRange') || '1m';
+        let days = 30;
+        if (chartRange === '3d') days = 3;
+        else if (chartRange === '1w') days = 7;
+        else if (chartRange === '1m') days = 30;
+
+        // Compute start date string
+        const startDate = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000);
+        const startStr = startDate.toISOString().slice(0, 19).replace('T', ' ');
+
+        const [rows] = await pool.execute<RowDataPacket[]>(
+          'SELECT DATE(created_at) as day, COALESCE(SUM(total_amount),0) as revenue FROM orders WHERE status IN ("paid","shipped","delivered") AND created_at >= ? GROUP BY DATE(created_at) ORDER BY DATE(created_at) ASC',
+          [startStr]
+        );
+
+        const map: Record<string, number> = {};
+        for (const r of rows as RowDataPacket[]) {
+          map[String(r.day)] = Number(r.revenue || 0);
+        }
+
+        // Build labels and fill missing days with 0
+        const arr = [] as { label: string; revenue: number }[];
+        for (let i = 0; i < days; i++) {
+          const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+          const key = d.toISOString().slice(0, 10);
+          let label = '';
+          if (days <= 7) {
+            // show weekday short
+            label = d.toLocaleDateString('en-IN', { weekday: 'short' });
+          } else {
+            // show day numeric and short month
+            label = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+          }
+          arr.push({ label, revenue: map[key] || 0 });
+        }
+        chartStats = arr;
+      } catch (err) {
+        console.warn('Failed to build chart stats:', err);
+        chartStats = [];
+      }
+
     } catch (error) {
       console.error('Error fetching order stats:', error);
       totalOrders = 0;

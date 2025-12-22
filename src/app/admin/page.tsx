@@ -84,6 +84,30 @@ export default function AdminDashboard() {
     fetchStats();
   }, [fetchStats]);
 
+  // Render client-side chart dynamically to avoid SSR issues
+  useEffect(() => {
+    const mount = async () => {
+      if (!stats.monthlyStats || stats.monthlyStats.length === 0) return;
+      const { default: SalesChart } = await import('@/components/SalesChart');
+      const data = stats.monthlyStats.map(s => ({ month: s.month, revenue: s.revenue }));
+
+      // render into placeholder
+      const root = document.getElementById('sales-chart-root');
+      if (!root) return;
+      // Create a container
+      const container = document.createElement('div');
+      root.innerHTML = '';
+      root.appendChild(container);
+
+      // Preact/React rendering without adding a dependency: use ReactDOM
+      // But since we already have React, dynamically import react-dom/client
+      const React = (await import('react')).default;
+      const { createRoot } = await import('react-dom/client');
+      createRoot(container).render(React.createElement(SalesChart, { data }));
+    };
+    mount();
+  }, [stats.monthlyStats]);
+
   const statCards = [
     {
       label: 'Total Revenue',
@@ -229,20 +253,19 @@ export default function AdminDashboard() {
               <option>All time</option>
             </select>
           </div>
-          {/* Simple Bar Chart */}
-          <div className="h-64 flex items-end justify-between gap-3 px-4">
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
-              const heights = [40, 65, 50, 80, 60, 75];
-              return (
-                <div key={month} className="flex-1 flex flex-col items-center gap-2">
-                  <div
-                    className="w-full bg-black rounded-t-lg transition-all hover:bg-gray-800"
-                    style={{ height: `${heights[index]}%` }}
-                  />
-                  <span className="text-xs text-gray-500">{month}</span>
+          {/* Sales Chart */}
+          <div>
+            {stats.monthlyStats && stats.monthlyStats.length > 0 ? (
+              // Pass monthlyStats as data to the chart component
+              <div>
+                {/* Import lazily with client component wrapper */}
+                <div id="sales-chart-root">
+                  {/* Client component renders here */}
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-10">No sales data available</div>
+            )}
           </div>
         </div>
 
