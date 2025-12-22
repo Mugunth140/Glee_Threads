@@ -79,7 +79,11 @@ export default function CheckoutPage() {
             shipping_fee: Number(data.settings.shipping_fee || 99),
             free_shipping_threshold: Number(data.settings.free_shipping_threshold || 999),
             gst_percentage: Number(data.settings.gst_percentage || 18),
-            gst_enabled: typeof data.settings.gst_enabled !== 'undefined' ? Boolean(data.settings.gst_enabled) : true,
+            gst_enabled: (() => {
+              const v = data.settings.gst_enabled;
+              if (v === true || v === 'true' || v === 1 || v === '1') return true;
+              return false;
+            })(),
           });
         }
       } catch {
@@ -207,14 +211,18 @@ export default function CheckoutPage() {
     const encodedMsg = encodeURIComponent(msg);
     const waUrl = `https://wa.me/${ownerNumber}?text=${encodedMsg}`;
     
-    // 3. Navigate straight to WhatsApp
-    // window.location.href is usually not blocked by popup blockers even after async calls
-    window.location.href = waUrl;
+    // 3. Open WhatsApp in a new tab and keep current tab so we can redirect to success reliably
+    try {
+      window.open(waUrl, '_blank');
+    } catch {
+      // fallback to same-tab navigation if popup blocked
+      window.location.href = waUrl;
+    }
 
     // 4. Clear Cart
     clearCart();
     try { localStorage.setItem('glee_cart_v1', JSON.stringify([])); } catch {}
-    
+
     // 5. Redirect to success page after a short delay to allow WhatsApp to trigger
     setTimeout(() => {
       router.replace(`/checkout/success?orderId=${orderId}`);
@@ -263,7 +271,8 @@ export default function CheckoutPage() {
         // ignore
       }
       showToast('Order placed — thank you!', { type: 'success' });
-      router.push('/');
+      // Redirect to success page for consistent desktop/mobile UX
+      router.replace(`/checkout/success?orderId=${orderId}`);
     } catch (err) {
       console.error('Error placing order:', err);
       showToast('Failed to place order', { type: 'error' });

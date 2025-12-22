@@ -100,7 +100,11 @@ export default function CartPage() {
             shipping_fee: Number(data.settings.shipping_fee || 99),
             free_shipping_threshold: Number(data.settings.free_shipping_threshold || 999),
             gst_percentage: Number(data.settings.gst_percentage || 18),
-            gst_enabled: typeof data.settings.gst_enabled !== 'undefined' ? Boolean(data.settings.gst_enabled) : true,
+            gst_enabled: (() => {
+              const v = data.settings.gst_enabled;
+              if (v === true || v === 'true' || v === 1 || v === '1') return true;
+              return false;
+            })(),
           });
         }
       } catch {

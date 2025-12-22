@@ -17,10 +17,12 @@ function WhatsappContent() {
 
   const handleOpenWhatsApp = () => {
     if (waUrl) {
-      window.location.href = waUrl;
-      // After a short delay, redirect to success? Or let user click "Done".
-      // Better to let user manually confirm they are done or just leave them here/redirect after timeout.
-      // Let's redirect to success after a delay to ensure the browser has time to handle the custom protocol.
+      try {
+        window.open(waUrl, '_blank');
+      } catch {
+        window.location.href = waUrl;
+      }
+      // After a short delay, redirect to success in this tab so desktop shows success page
       setTimeout(() => {
         router.push(`/checkout/success?orderId=${orderId}`);
       }, 1500);

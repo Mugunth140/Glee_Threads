@@ -59,6 +59,11 @@ export default function AdminSettingsPage() {
         await fetchData();
         const { showToast } = await import('@/lib/toast');
         showToast('Store settings saved', { type: 'success' });
+      } else if (res.status === 401) {
+        // Unauthorized - clear tokens & redirect
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        router.push('/admin/login');
       } else {
         const { showToast } = await import('@/lib/toast');
         showToast('Failed to save store settings', { type: 'error' });
@@ -103,6 +108,13 @@ export default function AdminSettingsPage() {
       const settingsRes = await fetch('/api/admin/settings', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      if (settingsRes.status === 401) {
+        // Admin not authorized, clear tokens and redirect to login
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        router.push('/admin/login');
+        return;
+      }
       if (settingsRes.ok) {
         const data = await settingsRes.json();
         if (data.settings) {
