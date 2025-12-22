@@ -16,6 +16,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             fill
             className="object-cover"
+            unoptimized
           />
         </div>
         <div className="p-4">

@@ -22,6 +22,12 @@ interface CategoryCountRow extends RowDataPacket {
   product_count: number;
 }
 
+interface MonthlyStatRow extends RowDataPacket {
+  month: string;
+  orders: number;
+  revenue: number;
+}
+
 interface SumRow extends RowDataPacket {
   total: number;
 }
@@ -57,18 +63,6 @@ export async function GET(request: Request) {
       'SELECT COUNT(*) as count FROM categories'
     );
 
-    // Get total users (site may not track end-users in DB)
-    let totalUsersCount = 0;
-    try {
-      const [userCount] = await pool.execute<CountRow[]>(
-        'SELECT COUNT(*) as count FROM users WHERE role = "user"'
-      );
-      totalUsersCount = userCount[0]?.count || 0;
-    } catch {
-      // users table was removed intentionally; fall back to 0
-      totalUsersCount = 0;
-    }
-
     // Get recent products with category
     const [recentProducts] = await pool.execute<ProductRow[]>(
       `SELECT p.id, p.name, p.price, p.image_url, c.name as category_name 
@@ -87,56 +81,89 @@ export async function GET(request: Request) {
        LIMIT 5`
     );
 
-    // Get total orders and revenue (if orders table exists)
+    // Get total orders and revenue
     let totalOrders = 0;
     let totalRevenue = 0;
     let pendingOrders = 0;
+    let paidOrdersCount = 0;
+    let monthlyStats: { month: string; orders: number; revenue: number }[] = [];
     
     try {
+      // Total Orders (All valid orders)
       const [orderCount] = await pool.execute<CountRow[]>(
-        'SELECT COUNT(*) as count FROM orders'
+        'SELECT COUNT(*) as count FROM orders WHERE status != "cancelled"'
       );
       totalOrders = orderCount[0]?.count || 0;
 
+      // Pending Orders (status based)
       const [pendingCount] = await pool.execute<CountRow[]>(
         'SELECT COUNT(*) as count FROM orders WHERE status IN ("pending", "processing")'
       );
       pendingOrders = pendingCount[0]?.count || 0;
 
-      const [revenueSum] = await pool.execute<SumRow[]>(
-        'SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status NOT IN ("cancelled", "refunded")'
+      // Paid Orders Count (requested for "Total Customers" metric) - status based
+      const [paidCount] = await pool.execute<CountRow[]>(
+        'SELECT COUNT(*) as count FROM orders WHERE status IN ("paid", "shipped", "delivered")'
       );
-      totalRevenue = revenueSum[0]?.total || 0;
-    } catch {
-      // Orders table might not exist
+      paidOrdersCount = paidCount[0]?.count || 0;
+
+      // Total Revenue (only paid/completed orders)
+      const [revenueSum] = await pool.execute<SumRow[]>(
+        'SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status IN ("paid", "shipped", "delivered")'
+      );
+      totalRevenue = Number(revenueSum[0]?.total || 0);
+
+      // Monthly Stats (Last 6 months)
+      const [statsRows] = await pool.execute<MonthlyStatRow[]>(`
+        SELECT 
+            DATE_FORMAT(created_at, '%b') as month,
+            COUNT(*) as orders,
+            SUM(total_amount) as revenue
+        FROM orders
+        WHERE status IN ("paid", "shipped", "delivered")
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m'), month
+        ORDER BY created_at ASC
+      `);
+      
+      monthlyStats = statsRows.map(r => ({
+        month: r.month,
+        orders: Number(r.orders),
+        revenue: Number(r.revenue)
+      }));
+
+    } catch (error) {
+      console.error('Error fetching order stats:', error);
       totalOrders = 0;
       totalRevenue = 0;
       pendingOrders = 0;
+      paidOrdersCount = 0;
+      monthlyStats = [];
     }
 
-    // Get low stock products count
-    let lowStockProducts = 0;
+    // Get total subscribers count
+    let totalSubscribers = 0;
     try {
-      const [lowStockCount] = await pool.execute<CountRow[]>(
-        `SELECT COUNT(DISTINCT product_id) as count FROM product_inventory WHERE quantity < 5`
+      const [subscribeCount] = await pool.execute<CountRow[]>(
+        'SELECT COUNT(*) as count FROM subscribes'
       );
-      lowStockProducts = lowStockCount[0]?.count || 0;
+      totalSubscribers = subscribeCount[0]?.count || 0;
     } catch {
-      lowStockProducts = 0;
+      totalSubscribers = 0;
     }
 
     return NextResponse.json({
       totalProducts: productCount[0]?.count || 0,
       totalCategories: categoryCount[0]?.count || 0,
-      totalUsers: totalUsersCount,
+      totalUsers: paidOrdersCount,
       totalOrders,
       totalRevenue,
       pendingOrders,
-      lowStockProducts,
+      totalSubscribers,
       recentProducts,
       topCategories,
       recentOrders: [],
-      monthlyStats: [],
+      monthlyStats,
     });
   } catch (error) {
     console.error('Dashboard error:', error);

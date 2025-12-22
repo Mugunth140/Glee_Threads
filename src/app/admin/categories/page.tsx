@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface Category {
@@ -25,6 +26,7 @@ export default function AdminCategoriesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetchCategories();
@@ -38,6 +40,14 @@ export default function AdminCategoriesPage() {
           'Authorization': `Bearer ${token}`
         }
       });
+      
+      if (res.status === 401) {
+         localStorage.removeItem('adminToken');
+         localStorage.removeItem('adminUser');
+         router.push('/admin/login');
+         return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setCategories(data.categories);

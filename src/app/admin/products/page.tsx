@@ -236,6 +236,7 @@ export default function AdminProductsPage() {
                               alt={product.name}
                               fill
                               className="object-cover"
+                              unoptimized
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-500">

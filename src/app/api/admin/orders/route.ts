@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
           user_email VARCHAR(255),
           phone VARCHAR(32),
           total_amount DECIMAL(10,2) NOT NULL,
+          coupon_code VARCHAR(50) NULL,
+          coupon_discount_percent INT NULL,
           status VARCHAR(50) DEFAULT 'pending',
           shipping_address TEXT,
           payment_method VARCHAR(50),
@@ -75,6 +77,14 @@ export async function GET(request: NextRequest) {
       `);
     }
 
+    // Ensure coupon columns exist on older databases
+    try {
+      await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50) NULL`);
+      await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_percent INT NULL`);
+    } catch (err) {
+      // ignore - columns may already exist or DB may not support IF NOT EXISTS, non-fatal
+    }
+
     const [orders] = await pool.query<RowDataPacket[]>(`
       SELECT 
         o.id,
@@ -82,6 +92,8 @@ export async function GET(request: NextRequest) {
         o.user_name,
         o.user_email,
         o.total_amount,
+        o.coupon_code,
+        o.coupon_discount_percent,
         o.status,
         o.created_at
       FROM orders o
@@ -93,12 +105,15 @@ export async function GET(request: NextRequest) {
       const [items] = await pool.query<RowDataPacket[]>(`
         SELECT 
           oi.id,
-          p.name as product_name,
+          COALESCE(p.name, 'Custom Design') as product_name,
           oi.quantity,
           oi.size,
-          oi.price
+          oi.price,
+          oi.custom_color,
+          oi.custom_image_url,
+          oi.custom_text
         FROM order_items oi
-        JOIN products p ON oi.product_id = p.id
+        LEFT JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = ?
       `, [order.id]);
       order.items = items;

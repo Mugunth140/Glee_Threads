@@ -4,35 +4,36 @@ import { RowDataPacket } from 'mysql2';
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
+    const { whatsappNumber } = await request.json();
 
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    // Basic validation for 10-digit number
+    if (!whatsappNumber || !/^\d{10}$/.test(whatsappNumber)) {
       return NextResponse.json(
-        { error: 'Invalid email address' },
+        { error: 'Invalid WhatsApp number. Please enter a 10-digit number.' },
         { status: 400 }
       );
     }
 
-    // Check if email already exists
+    // Check if number already exists
     const [existing] = await pool.execute<RowDataPacket[]>(
-      'SELECT id FROM subscribes WHERE email = ?',
-      [email]
+      'SELECT id FROM subscribes WHERE whatsapp_number = ?',
+      [whatsappNumber]
     );
 
     if (existing.length > 0) {
       return NextResponse.json(
-        { message: 'Already subscribed' },
+        { message: 'Number already subscribed' },
         { status: 200 }
       );
     }
 
     await pool.execute(
-      'INSERT INTO subscribes (email) VALUES (?)',
-      [email]
+      'INSERT INTO subscribes (whatsapp_number) VALUES (?)',
+      [whatsappNumber]
     );
 
     return NextResponse.json(
-      { message: 'Successfully subscribed' },
+      { message: 'Successfully subscribed to WhatsApp updates!' },
       { status: 201 }
     );
   } catch (error) {

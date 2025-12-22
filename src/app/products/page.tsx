@@ -26,6 +26,7 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedStyle, setSelectedStyle] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>('');
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -56,8 +57,9 @@ export default function ProductsPage() {
       if (selectedCategory) params.set('category', selectedCategory);
       if (selectedStyle) params.set('style', selectedStyle);
       if (sortBy) params.set('sort', sortBy);
+      if (searchQuery) params.set('search', searchQuery);
       const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`;
-      console.debug('Fetching products from', url, { selectedCategory, selectedStyle, sortBy });
+      console.debug('Fetching products from', url, { selectedCategory, selectedStyle, sortBy, searchQuery });
       const response = await fetch(url);
       console.debug('Products API response status:', response.status, response.ok);
       const data = await response.json();
@@ -121,24 +123,27 @@ export default function ProductsPage() {
 
   useEffect(() => {
     // Read category from browser URL on mount and when navigation occurs
-    const readCategoryFromUrl = () => {
+    const readParamsFromUrl = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const category = params.get('category');
+        const search = params.get('search');
         setSelectedCategory(category || '');
+        setSearchQuery(search || '');
       } catch {
         setSelectedCategory('');
+        setSearchQuery('');
       }
     };
-    readCategoryFromUrl();
-    window.addEventListener('popstate', readCategoryFromUrl);
-    return () => window.removeEventListener('popstate', readCategoryFromUrl);
+    readParamsFromUrl();
+    window.addEventListener('popstate', readParamsFromUrl);
+    return () => window.removeEventListener('popstate', readParamsFromUrl);
   }, []);
 
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter]);
+  }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter, searchQuery]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -191,7 +196,7 @@ export default function ProductsPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-full text-sm font-medium hover:border-black transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-full text-sm font-medium text-black/80 hover:border-gray-500 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -201,9 +206,9 @@ export default function ProductsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 border border-gray-200 rounded-full text-sm font-medium bg-white hover:border-black transition-colors focus:outline-none focus:border-black"
+              className="px-3 py-3 border border-gray-200 rounded-full text-sm font-medium bg-white text-black/80 hover:border-gray-500 transition-colors focus:outline-none focus:border-gray-600"
             >
-              <option value="">Sort By</option>
+              <option value="default">Sort By</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
               <option value="newest">Newest First</option>
@@ -279,6 +284,9 @@ export default function ProductsPage() {
                   setSortBy('');
                   setSelectedPriceRange('');
                   setSelectedSizeFilter('');
+                  setSearchQuery('');
+                  // Clear URL params
+                  window.history.pushState({}, '', '/products');
                 }}
                 className="text-sm font-medium text-black hover:underline"
               >
@@ -331,6 +339,7 @@ export default function ProductsPage() {
                     alt={product.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    unoptimized
                   />
                   {/* Quick Add Button */}
                   <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -366,7 +375,7 @@ export default function ProductsPage() {
         {/* Load More */}
         {products.length > 0 && (
           <div className="text-center mt-12">
-            <button className="px-8 py-4 border border-gray-200 rounded-full text-sm font-semibold hover:border-black transition-colors">
+            <button className="px-8 py-4 border border-gray-200 rounded-full text-sm font-semibold text-black hover:border-gray-600 transition-colors">
               Load More Products
             </button>
           </div>

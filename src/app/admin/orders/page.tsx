@@ -1,6 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 interface Order {
   id: number;
@@ -8,6 +11,8 @@ interface Order {
   user_name: string;
   user_email: string;
   total_amount: number;
+  coupon_code?: string | null;
+  coupon_discount_percent?: number | null;
   status: string;
   created_at: string;
   items: OrderItem[];
@@ -19,6 +24,9 @@ interface OrderItem {
   quantity: number;
   size: string;
   price: number;
+  custom_color?: string;
+  custom_image_url?: string;
+  custom_text?: string;
 }
 
 export default function AdminOrdersPage() {
@@ -26,6 +34,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const router = useRouter();
 
   useEffect(() => {
     fetchOrders();
@@ -39,6 +48,14 @@ export default function AdminOrdersPage() {
           'Authorization': `Bearer ${token}`
         }
       });
+      
+      if (res.status === 401) {
+         localStorage.removeItem('adminToken');
+         localStorage.removeItem('adminUser');
+         router.push('/admin/login');
+         return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
@@ -126,7 +143,7 @@ export default function AdminOrdersPage() {
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Order ID</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Customer</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Date</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Amount</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Final Price</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Status</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-gray-500">Actions</th>
               </tr>
@@ -160,9 +177,19 @@ export default function AdminOrdersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-black font-medium">
-                        ₹{order.total_amount.toLocaleString('en-IN')}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-black font-medium">
+                          ₹{order.total_amount.toLocaleString('en-IN')}
+                        </span>
+                        {order.coupon_code && (
+                          <span className="mt-1 inline-flex items-center gap-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium">
+                            <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                              <path d="M10 2a2 2 0 012 2v1h3a1 1 0 011 1v3h1a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2v-1H8a1 1 0 01-1-1V9H6a1 1 0 01-1-1V5a2 2 0 012-2h3V4a2 2 0 002-2z" />
+                            </svg>
+                            Coupon: {order.coupon_code}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(order.status)}`}>
@@ -250,16 +277,40 @@ export default function AdminOrdersPage() {
               {selectedOrder.items && selectedOrder.items.length > 0 ? (
                 <div className="divide-y divide-zinc-700">
                   {selectedOrder.items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between px-4 py-3">
-                      <div>
-                        <p className="text-black font-medium">{item.product_name}</p>
-                        <p className="text-sm text-gray-500">
-                          Size: {item.size} × {item.quantity}
+                    <div key={item.id} className="flex flex-col gap-2 px-4 py-3 border-b border-gray-50 last:border-0">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-black font-medium">{item.product_name}</p>
+                          <p className="text-sm text-gray-500">
+                            Size: {item.size} × {item.quantity}
+                          </p>
+                          {item.custom_color && (
+                             <p className="text-xs text-gray-500 mt-1">Color: {item.custom_color}</p>
+                          )}
+                          {item.custom_text && (
+                             <p className="text-xs text-gray-500 mt-0.5 italic">&quot;{item.custom_text}&quot;</p>
+                          )}
+                        </div>
+                        <p className="text-black font-medium">
+                          ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                         </p>
                       </div>
-                      <p className="text-black font-medium">
-                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                      </p>
+                      
+                      {item.custom_image_url && (
+                        <div className="mt-2">
+                           <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Custom Design</p>
+                           <a href={item.custom_image_url} target="_blank" rel="noopener noreferrer" className="block relative w-32 h-32 bg-gray-50 rounded border border-gray-200 overflow-hidden hover:opacity-90 transition-opacity">
+                              {/* Use standard img tag for external blob urls or Next Image if configured */}
+                              <Image 
+                                src={item.custom_image_url} 
+                                alt="Custom Design" 
+                                fill
+                                className="object-contain w-full h-full"
+                                unoptimized
+                              />
+                           </a>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -268,13 +319,31 @@ export default function AdminOrdersPage() {
               )}
             </div>
 
-            {/* Total */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <span className="text-lg font-semibold text-black">Total</span>
-              <span className="text-xl font-bold text-black">
-                ₹{selectedOrder.total_amount.toLocaleString('en-IN')}
-              </span>
-            </div>
+            {/* Coupon & Totals */}
+            {selectedOrder && (
+              (() => {
+                const itemsTotal = (selectedOrder.items || []).reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 0)), 0);
+                const discountPercent = selectedOrder.coupon_discount_percent ? Number(selectedOrder.coupon_discount_percent) : 0;
+                const discountAmount = discountPercent ? Math.round(itemsTotal * (discountPercent / 100)) : 0;
+                return (
+                  <div>
+                    {selectedOrder.coupon_code && (
+                      <div className="flex items-center justify-between pb-2">
+                        <span className="text-sm text-gray-600">Coupon</span>
+                        <span className="text-sm text-green-600 font-medium">{selectedOrder.coupon_code} (-{discountPercent}%) • -₹{discountAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <span className="text-lg font-semibold text-black">Total</span>
+                      <span className="text-xl font-bold text-black">
+                        ₹{selectedOrder.total_amount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
           </div>
         </div>
       )}

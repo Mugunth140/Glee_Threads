@@ -86,9 +86,32 @@ export default function CartPage() {
     setItems(getCart());
   };
 
+  const [storeSettings, setStoreSettings] = useState<{ shipping_fee: number; free_shipping_threshold: number; gst_percentage: number; gst_enabled: boolean }>({ shipping_fee: 99, free_shipping_threshold: 999, gst_percentage: 18, gst_enabled: true });
+
+  useEffect(() => {
+    // fetch public settings
+    (async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.settings) {
+          setStoreSettings({
+            shipping_fee: Number(data.settings.shipping_fee || 99),
+            free_shipping_threshold: Number(data.settings.free_shipping_threshold || 999),
+            gst_percentage: Number(data.settings.gst_percentage || 18),
+            gst_enabled: typeof data.settings.gst_enabled !== 'undefined' ? Boolean(data.settings.gst_enabled) : true,
+          });
+        }
+      } catch {
+        // ignore and keep defaults
+      }
+    })();
+  }, []);
+
   const subtotal = items.reduce((s, it) => s + ((it.product?.price || 0) * (it.quantity || 1)), 0);
-  const shipping = subtotal > 999 ? 0 : items.length ? 99 : 0;
-  const gst = Math.round(subtotal * 0.18);
+  const shipping = subtotal >= storeSettings.free_shipping_threshold ? 0 : (items.length ? storeSettings.shipping_fee : 0);
+  const gst = storeSettings.gst_enabled ? Math.round(subtotal * (storeSettings.gst_percentage / 100)) : 0;
   const total = subtotal + shipping + gst;
 
   if (!items || items.length === 0) {
@@ -97,7 +120,7 @@ export default function CartPage() {
         <div className="container mx-auto px-4 lg:px-8 py-24 text-center">
           <h2 className="text-2xl font-bold text-black mb-4">Your cart is empty</h2>
           <p className="text-gray-600 mb-6">Add items to checkout — find your favorite tees and add them to your cart.</p>
-          <Link href="/products" className="px-6 py-3 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition-all">
+          <Link href="/products" className="px-6 py-3 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary-hover transition-all">
             Browse Products
           </Link>
         </div>
@@ -115,7 +138,7 @@ export default function CartPage() {
               <div key={item.id} className="flex gap-4 bg-white border border-gray-100 rounded-2xl p-4 items-center">
                 <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 relative">
                   {item.product?.image_url ? (
-                    <Image src={item.product.image_url} alt={item.product?.name || ''} fill className="object-cover" />
+                    <Image src={item.product.image_url} alt={item.product?.name || ''} fill className="object-cover" unoptimized />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">No image</div>
                   )}
@@ -136,9 +159,9 @@ export default function CartPage() {
                 <div className="flex flex-col items-end gap-2">
                   <button onClick={() => handleRemove(item.id)} className="text-sm text-red-600 ">Remove</button>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => changeQty(item.id, -1)} className="px-3 py-1 border rounded text-black">-</button>
+                    <button onClick={() => changeQty(item.id, -1)} className="px-3 py-1 border rounded text-black hover:border-primary hover:text-primary transition-colors">-</button>
                     <div className="px-3 py-1 border rounded text-black">{item.quantity}</div>
-                    <button onClick={() => changeQty(item.id, 1)} className="px-3 py-1 border rounded text-black">+</button>
+                    <button onClick={() => changeQty(item.id, 1)} className="px-3 py-1 border rounded text-black hover:border-primary hover:text-primary transition-colors">+</button>
                   </div>
                   <div className="text-sm font-medium text-black">{formatPrice(Number(item.product?.price || 0) * (item.quantity || 1))}</div>
                 </div>
@@ -156,15 +179,15 @@ export default function CartPage() {
               <span>Shipping</span>
               <span>{shipping === 0 ? 'FREE' : formatPrice(shipping)}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-600 mb-4">
-              <span>GST</span>
-              <span>{formatPrice(gst)}</span>
+            <div className={`flex justify-between text-sm ${storeSettings.gst_enabled ? 'text-gray-600' : 'text-gray-400 opacity-70' } mb-2`}>
+              <span>Estimated Tax</span>
+              <span>{storeSettings.gst_enabled ? formatPrice(gst) : '—'}</span>
             </div>
             <div className="flex justify-between font-semibold text-black text-lg mb-4">
               <span>Total</span>
               <span>{formatPrice(total)}</span>
             </div>
-            <Link href="/checkout" className="block text-center px-4 py-3 bg-black text-white rounded-full font-semibold">Proceed to Checkout</Link>
+            <Link href="/checkout" className="block text-center px-4 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-hover transition-colors">Proceed to Checkout</Link>
           </aside>
         </div>
       </div>

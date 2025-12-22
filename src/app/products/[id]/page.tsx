@@ -155,6 +155,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 alt={product.name}
                 fill
                 className="object-cover"
+                unoptimized
               />
             </div>
             
@@ -170,7 +171,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       : 'opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <Image src={img} alt="" fill className="object-cover" />
+                  <Image src={img} alt="" fill className="object-cover" unoptimized />
                 </button>
               ))}
             </div>
@@ -240,7 +241,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {/* Stock/quantity display removed per request */}
             </div>
 
-            {/* Add to Cart & Wishlist */}
+            {/* Add to Cart */}
             <div className="flex gap-3">
               <button
                 onClick={handleAddToCart}
@@ -252,11 +253,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 className="flex-1 bg-primary text-white py-4 rounded-full text-sm font-semibold hover:bg-primary-hover transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {addingToCart ? 'Adding...' : 'Add to Cart'}
-              </button>
-              <button className="p-4 border border-gray-200 rounded-full hover:border-black transition-colors">
-                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
               </button>
             </div>
 

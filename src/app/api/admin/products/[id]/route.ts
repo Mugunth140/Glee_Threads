@@ -54,6 +54,7 @@ export async function GET(
         p.category_id,
         c.name as category_name,
         p.created_at,
+        p.sizes,
         p.is_out_of_stock
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id

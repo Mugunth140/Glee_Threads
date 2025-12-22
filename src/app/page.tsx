@@ -15,30 +15,41 @@ const formatPrice = (price: number) => {
   }).format(price);
 };
 
+interface HeroProduct {
+  id: number;
+  product_id: number;
+  position: number;
+  product: Product;
+}
+
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [heroProducts, setHeroProducts] = useState<HeroProduct[]>([]);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [email, setEmail] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [subscribing, setSubscribing] = useState(false);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!whatsappNumber || whatsappNumber.length !== 10) {
+      showToast('Please enter a valid 10-digit number', { type: 'error' });
+      return;
+    }
 
     setSubscribing(true);
     try {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ whatsappNumber }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
         showToast(data.message || 'Successfully subscribed!', { type: 'success' });
-        setEmail('');
+        setWhatsappNumber('');
       } else {
         showToast(data.error || 'Failed to subscribe', { type: 'error' });
       }
@@ -49,25 +60,49 @@ export default function Home() {
     }
   };
 
-  const categories = ['All', 'Graphic', 'Plain', 'Oversized', 'Premium', 'Custom'];
+  const categories = [
+    { name: 'Graphic', image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=1000' },
+    { name: 'Plain', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=1000' },
+    { name: 'Oversized', image: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?q=80&w=1000' },
+    { name: 'Premium', image: 'https://images.unsplash.com/photo-1562157873-818bc0726f68?q=80&w=1000' },
+    { name: 'Custom', image: 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?q=80&w=1000' }
+  ];
 
   useEffect(() => {
-    async function fetchFeatured() {
+    async function fetchData() {
       try {
-        const res = await fetch('/api/featured-products');
-        if (res.ok) {
-          const data = await res.json();
+        const [featuredRes, heroRes] = await Promise.all([
+          fetch('/api/featured-products'),
+          fetch('/api/hero-products')
+        ]);
+
+        if (featuredRes.ok) {
+          const data = await featuredRes.json();
           const arr: Product[] = Array.isArray(data) ? data : [];
           setFeaturedProducts(arr.slice(0, 8));
         }
+
+        if (heroRes.ok) {
+          const data = await heroRes.json();
+          setHeroProducts(Array.isArray(data) ? data : []);
+        }
       } catch (error) {
-        console.error('Failed to fetch featured products:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     }
-    fetchFeatured();
+    fetchData();
   }, []);
+
+  // Auto-scroll carousel
+  useEffect(() => {
+    if (heroProducts.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroProducts.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroProducts.length]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -76,7 +111,7 @@ export default function Home() {
         <div className="container mx-auto px-4 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-8 items-center min-h-[70vh] py-12">
             {/* Left - Text Content */}
-            <div className="order-2 lg:order-1">
+            <div className="order-1 lg:order-1">
               <span className="inline-block px-4 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-600 mb-6">
                 Custom & Ready-Made T-Shirts
               </span>
@@ -88,10 +123,10 @@ export default function Home() {
               <p className="text-lg text-gray-600 mb-8 max-w-md leading-relaxed">
                 Create custom t-shirts with your unique designs or shop our collection of ready-made styles. Premium quality, endless possibilities.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/customize"
-                  className="inline-flex items-center gap-2 bg-primary text-white px-8 py-4 rounded-full text-sm font-semibold hover:bg-primary-hover transition-all"
+                  className="flex items-center justify-center gap-2 bg-primary text-white px-8 py-4 rounded-full text-sm font-semibold hover:bg-primary-hover transition-all w-full sm:w-auto"
                 >
                   Customize Now
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,7 +135,7 @@ export default function Home() {
                 </Link>
                 <Link
                   href="/products"
-                  className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full text-sm font-semibold border border-gray-200 hover:border-black/60 transition-all"
+                  className="flex items-center justify-center gap-2 bg-white text-black px-8 py-4 rounded-full text-sm font-semibold border border-gray-200 hover:border-black/60 transition-all w-full sm:w-auto"
                 >
                   Shop Collection
                 </Link>
@@ -123,32 +158,82 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right - Featured Image */}
-            <div className="order-1 lg:order-2 relative">
+            {/* Right - Featured Image / Carousel */}
+            <div className="order-2 lg:order-2 relative">
               <div className="relative aspect-3/4 max-w-md mx-auto lg:max-w-none">
                 <div className="absolute inset-0 bg-linear-to-b from-gray-100 to-gray-200 rounded-3xl" />
-                {featuredProducts[0] && (
-                  <Image
-                    src={featuredProducts[0].image_url}
-                    alt="Featured Product"
-                    fill
-                    className="object-cover rounded-3xl"
-                    priority
-                  />
-                )}
-                {/* Floating Card */}
-                {featuredProducts[0] && (
-                  <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-500">Featured</p>
-                        <p className="font-semibold text-black">{featuredProducts[0].name}</p>
+                
+                {/* Carousel Image */}
+                {heroProducts.length > 0 ? (
+                  heroProducts.map((item, idx) => (
+                    <Link
+                      key={item.id}
+                      href={`/products/${item.product_id}`}
+                      className={`absolute inset-0 transition-opacity duration-1000 ease-in-out block ${
+                        idx === currentHeroIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                      }`}
+                    >
+                      <Image
+                        src={item.product.image_url}
+                        alt={item.product.name}
+                        fill
+                        className="object-cover rounded-3xl"
+                        priority={idx === 0}
+                        unoptimized
+                      />
+                      {/* Floating Card */}
+                      <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-500">Featured</p>
+                            <p className="font-semibold text-black">{item.product.name}</p>
+                          </div>
+                          <p className="text-xl font-bold text-black">{formatPrice(Number(item.product.price))}</p>
+                        </div>
                       </div>
-                      <p className="text-xl font-bold text-black">{formatPrice(Number(featuredProducts[0].price))}</p>
-                    </div>
-                  </div>
+                    </Link>
+                  ))
+                ) : (
+                  // Fallback to Featured Product
+                  featuredProducts[0] && (
+                    <Link href={`/products/${featuredProducts[0].id}`} className="block h-full relative">
+                      <Image
+                        src={featuredProducts[0].image_url}
+                        alt="Featured Product"
+                        fill
+                        className="object-cover rounded-3xl"
+                        priority
+                        unoptimized
+                      />
+                      {/* Floating Card */}
+                      <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-500">Featured</p>
+                            <p className="font-semibold text-black">{featuredProducts[0].name}</p>
+                          </div>
+                          <p className="text-xl font-bold text-black">{formatPrice(Number(featuredProducts[0].price))}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  )
                 )}
               </div>
+
+               {/* Carousel Indicators */}
+               {heroProducts.length > 1 && (
+                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
+                    {heroProducts.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentHeroIndex(idx)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          idx === currentHeroIndex ? 'bg-black w-4' : 'bg-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
 
               {/* Decorative Elements */}
               {/* <div className="absolute -top-4 -right-4 w-24 h-24 bg-black rounded-full opacity-5" />
@@ -158,22 +243,57 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Category Pills */}
-      <section className="py-8 border-y border-gray-100">
+      {/* Shop by Category Section */}
+      <section className="py-16 border-y border-gray-100 bg-gray-50/30">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-center gap-3 overflow-x-auto pb-2">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-6 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                  selectedCategory === cat
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+            <div>
+              <h2 className="text-3xl font-bold text-black mb-2">Shop by Category</h2>
+              <p className="text-gray-500">Find the style that suits you best</p>
+            </div>
+            <Link 
+              href="/products" 
+              className="text-sm font-semibold text-black flex items-center gap-2 hover:underline"
+            >
+              All Products
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            {categories.map((cat, idx) => (
+              <Link
+                key={cat.name}
+                href={`/products?category=${cat.name.toLowerCase()}`}
+                className={`group relative flex flex-col justify-between p-8 rounded-3xl bg-black border border-gray-100 overflow-hidden
+                  ${idx === 0 || idx === 1 ? 'md:col-span-3 aspect-2/1' : 'md:col-span-2 aspect-square'}
+                `}
               >
-                {cat}
-              </button>
+                <Image
+                  src={cat.image}
+                  alt={cat.name}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-50"
+                  unoptimized
+                />
+                {/* Abstract Background Gradient */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-gray-200/10 to-transparent rounded-bl-full transition-all duration-500 z-10" />
+                
+                <div className="relative z-10 flex justify-between items-start">
+                   <span className="text-xs font-bold uppercase tracking-widest text-white/80 group-hover:text-white transition-colors">Collection 0{idx + 1}</span>
+                   <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white transition-all duration-300 group-hover:bg-white group-hover:text-black">
+                      <svg className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                   </div>
+                </div>
+
+                <div className="relative z-10 mt-auto">
+                  <h3 className="text-3xl md:text-4xl font-extrabold text-white transition-colors duration-300 tracking-tight">{cat.name}</h3>
+                  <p className="text-sm font-medium text-gray-300 group-hover:text-white mt-2 transition-all opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 duration-300 delay-75">
+                    Browse {cat.name} Collection
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -222,6 +342,7 @@ export default function Home() {
                       alt={product.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      unoptimized
                     />
                     {/* Quick Actions */}
                     <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -314,24 +435,29 @@ export default function Home() {
       <section className="py-20">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-black mb-4">Stay in the Loop</h2>
-            <p className="text-gray-500 mb-8">Subscribe to get special offers, free giveaways, and exclusive deals.</p>
-            <form onSubmit={handleSubscribe} className="flex gap-3 max-w-md mx-auto">
+            <h2 className="text-3xl font-bold text-black mb-4">Get Updates on WhatsApp</h2>
+            <p className="text-gray-500 mb-8">Subscribe to get special offers, free giveaways, and exclusive deals directly on WhatsApp.</p>
+            <form onSubmit={handleSubscribe} className="flex flex-col gap-4 max-w-md mx-auto">
               <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 px-5 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 text-black"
+                type="tel"
+                placeholder="Enter WhatsApp Number"
+                value={whatsappNumber}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  if (val.length <= 10) setWhatsappNumber(val);
+                }}
+                className="w-full px-6 py-4 bg-gray-100 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-primary/20 text-black transition-all"
                 disabled={subscribing}
                 required
+                pattern="\d{10}"
+                title="Please enter a valid 10-digit mobile number"
               />
               <button
                 type="submit"
                 disabled={subscribing}
-                className="px-8 py-3 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary-hover transition-colors disabled:opacity-50"
+                className="w-full px-8 py-4 bg-primary text-white rounded-2xl text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 active:scale-[0.98] disabled:opacity-50"
               >
-                {subscribing ? 'Subscribing...' : 'Subscribe'}
+                {subscribing ? 'Subscribing...' : 'Subscribe Now'}
               </button>
             </form>
           </div>

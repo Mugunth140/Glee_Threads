@@ -64,24 +64,28 @@ export async function GET(
       }
     }
 
-    // If no sizes defined on product row, try to fetch available sizes from product_inventory
+    // If no sizes defined on product row, try to fetch available sizes from product_sizes table
     if (sizesWithNames.length === 0 && !product.is_out_of_stock) {
       try {
-        const [invRows] = await pool.execute<RowDataPacket[]>(
-          `SELECT s.id as size_id, s.name as size_name, pi.quantity, pi.sku
-           FROM product_inventory pi
-           JOIN sizes s ON pi.size_id = s.id
-           WHERE pi.product_id = ?`,
+        const [sizeRows] = await pool.execute<RowDataPacket[]>(
+          `SELECT id, size, stock
+           FROM product_sizes
+           WHERE product_id = ?`,
           [productId]
         );
-        sizesWithNames = Array.isArray(invRows)
-          ? (invRows as RowDataPacket[]).map(r => {
-              const row = r as RowDataPacket & { size_id: number; size_name: string; quantity: number; sku: string };
-              return { size_name: String(row.size_name), size_id: Number(row.size_id), quantity: Number(row.quantity), sku: row.sku };
+        sizesWithNames = Array.isArray(sizeRows)
+          ? (sizeRows as RowDataPacket[]).map(r => {
+              const row = r as RowDataPacket & { id: number; size: string; stock: number };
+              return { size_name: String(row.size), size_id: Number(row.id), quantity: Number(row.stock), sku: '' };
             })
           : [];
-      } catch (err) {
-        console.warn('Could not fetch product inventory sizes:', err);
+      } catch (err: any) {
+        // If the table is missing, avoid printing the full stack — just warn and continue
+        if (err && err.code === 'ER_NO_SUCH_TABLE') {
+          console.warn('product_sizes table missing; skipping size lookup');
+        } else {
+          console.warn('Could not fetch product sizes from product_sizes table:', err?.message || err);
+        }
         // leave sizesWithNames as-is (empty)
       }
     }
@@ -101,9 +105,12 @@ export async function GET(
         [productId]
       );
       colors = Array.isArray(colorRows) ? (colorRows as { color_hex: string }[]).map(r => r.color_hex) : [];
-    } catch (err) {
-      // If table doesn't exist or other error, ignore and continue without colors
-      console.warn('Could not fetch product colors:', err);
+    } catch (err: any) {
+      if (err && err.code === 'ER_NO_SUCH_TABLE') {
+        console.warn('product_colors table missing; skipping color lookup');
+      } else {
+        console.warn('Could not fetch product colors:', err?.message || err);
+      }
       colors = [];
     }
 

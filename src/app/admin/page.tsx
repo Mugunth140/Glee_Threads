@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface DashboardStats {
@@ -11,7 +12,7 @@ interface DashboardStats {
   totalUsers: number;
   totalRevenue: number;
   pendingOrders: number;
-  lowStockProducts: number;
+  totalSubscribers: number;
   recentProducts: Array<{
     id: number;
     name: string;
@@ -45,13 +46,14 @@ export default function AdminDashboard() {
     totalUsers: 0,
     totalRevenue: 0,
     pendingOrders: 0,
-    lowStockProducts: 0,
+    totalSubscribers: 0,
     recentProducts: [],
     recentOrders: [],
     topCategories: [],
     monthlyStats: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     fetchStats();
@@ -63,6 +65,14 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin/dashboard', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      if (response.status === 401) {
+         localStorage.removeItem('adminToken');
+         localStorage.removeItem('adminUser');
+         router.push('/admin/login');
+         return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -132,7 +142,7 @@ export default function AdminDashboard() {
   const quickStats = [
     { label: 'Pending Orders', value: stats.pendingOrders, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Categories', value: stats.totalCategories, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Low Stock', value: stats.lowStockProducts, color: 'text-red-600', bg: 'bg-red-50' },
+    { label: 'Subscribers', value: stats.totalSubscribers, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   if (isLoading) {
@@ -356,6 +366,7 @@ export default function AdminDashboard() {
                       alt={product.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform"
+                      unoptimized
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-500">

@@ -13,5 +13,7 @@ export const SITE_SETTINGS = {
   hero_title: 'Design Your Perfect Tee',
   hero_subtitle: 'Create custom t-shirts with your unique designs or shop our collection of ready-made styles.',
   free_shipping_threshold: 999,
+  shipping_fee: 99,
   gst_percentage: 18,
+  gst_enabled: true,
 };

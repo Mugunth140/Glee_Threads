@@ -64,10 +64,56 @@ export default function CheckoutPage() {
     }, 0);
   }, []);
 
+  const [storeSettings, setStoreSettings] = useState<{ shipping_fee: number; free_shipping_threshold: number; gst_percentage: number; gst_enabled: boolean }>({ shipping_fee: 99, free_shipping_threshold: 999, gst_percentage: 18, gst_enabled: true });
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_percent: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.settings) {
+          setStoreSettings({
+            shipping_fee: Number(data.settings.shipping_fee || 99),
+            free_shipping_threshold: Number(data.settings.free_shipping_threshold || 999),
+            gst_percentage: Number(data.settings.gst_percentage || 18),
+            gst_enabled: typeof data.settings.gst_enabled !== 'undefined' ? Boolean(data.settings.gst_enabled) : true,
+          });
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 999 ? 0 : 99;
-  const gst = Math.round(subtotal * 0.18);
-  const total = subtotal + shipping + gst;
+  const discountAmount = appliedCoupon ? Math.round(subtotal * (appliedCoupon.discount_percent / 100)) : 0;
+  const subtotalAfterDiscount = subtotal - discountAmount;
+  const shipping = subtotalAfterDiscount >= storeSettings.free_shipping_threshold ? 0 : storeSettings.shipping_fee;
+  const gst = storeSettings.gst_enabled ? Math.round(subtotalAfterDiscount * (storeSettings.gst_percentage / 100)) : 0;
+  const total = subtotalAfterDiscount + shipping + gst;
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    try {
+      const res = await fetch('/api/coupons/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAppliedCoupon({ code: data.code, discount_percent: data.discount_percent });
+        showToast(`Coupon applied: ${data.discount_percent}% OFF`, { type: 'success' });
+      } else {
+        showToast(data.error || 'Invalid coupon', { type: 'error' });
+      }
+    } catch {
+      showToast('Error applying coupon', { type: 'error' });
+    }
+  };
 
   const isFormComplete = [
     formData.email,
@@ -80,7 +126,7 @@ export default function CheckoutPage() {
     formData.pincode,
   ].every((v) => typeof v === 'string' && v.trim().length > 0);
 
-  const proceedToShipping = () => {
+  const handleWhatsAppCheckout = async () => {
     // require phone
     if (!formData.phone) {
       showToast('Please enter your phone number so we can open WhatsApp', { type: 'error' });
@@ -90,32 +136,15 @@ export default function CheckoutPage() {
     // TODO : refactor to use phone number in .env
     // const ownerNumber = process.env.NEXT_PUBLIC_OWNER_WHATSAPP || 8248333655;
     const ownerNumber = 8248333655;
-    if (!ownerNumber) {
-      showToast('Site owner WhatsApp number is not configured', { type: 'error' });
-      setStep(2);
-      return;
-    }
-
+    
     const cart = getCart();
     if (!cart || cart.length === 0) {
       showToast('Your cart is empty', { type: 'error' });
       return;
     }
 
-    let msg = `New order from ${formData.firstName} ${formData.lastName} (${formData.phone})\n`;
-    msg += `Address: ${formData.address}, ${formData.city}, ${formData.state} - ${formData.pincode}\n\n`;
-    msg += `Items:\n`;
-    cart.forEach((it) => {
-      const name = it.product?.name || 'Product';
-      const qty = it.quantity || 1;
-      const size = it.size_name || it.size_id;
-      const color = it.color || '-';
-      msg += `- ${name} x${qty} | Size: ${size} | Color: ${color}\n`;
-    });
-    msg += `\nSubtotal: ${formatPrice(subtotal)}\nTotal: ${formatPrice(total)}`;
-
-    // encoded message (used below as encodedMsg)
-    // Save last order draft to localStorage so the WhatsApp confirmation page can persist it
+    // 1. Create Order in DB first
+    let orderId = null;
     try {
       const items = cart.map((it) => ({
         product_id: it.product_id,
@@ -123,6 +152,7 @@ export default function CheckoutPage() {
         size: it.size_name || it.size_id || null,
         price: Number(it.product?.price || 0),
       }));
+
       const payload = {
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
@@ -130,20 +160,65 @@ export default function CheckoutPage() {
         shipping_address: `${formData.address}${formData.apartment ? ', ' + formData.apartment : ''}, ${formData.city}, ${formData.state} - ${formData.pincode}`,
         payment_method: 'whatsapp',
         items,
-        total_amount: subtotal + shipping + gst,
+        // use computed `total` (already includes coupon discount)
+        total_amount: total,
+        coupon_code: appliedCoupon?.code || null,
+        coupon_discount_percent: appliedCoupon?.discount_percent || null,
       };
-      localStorage.setItem('glee_last_order', JSON.stringify(payload));
-    } catch {
-      // ignore
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const data = await res.json();
+      orderId = data.order_id;
+
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      showToast('Failed to create order. Please try again.', { type: 'error' });
+      return;
     }
 
-    const encodedMsg = encodeURIComponent(msg);
-    // open WhatsApp web/app with prefilled message to owner's number in a new tab
-    const waUrl = `https://wa.me/${ownerNumber}?text=${encodedMsg}`;
-    window.open(waUrl, '_blank');
+    // 2. Construct WhatsApp Message with Order ID
+    let msg = `*New Order #${orderId}*\n`;
+    msg += `Name: ${formData.firstName} ${formData.lastName} (${formData.phone})\n`;
+    msg += `Address: ${formData.address}, ${formData.city}, ${formData.state} - ${formData.pincode}\n\n`;
+    msg += `*Items:*\n`;
+    cart.forEach((it) => {
+      const name = it.product?.name || 'Product';
+      const qty = it.quantity || 1;
+      const size = it.size_name || it.size_id;
+      const color = it.color || '-';
+      msg += `- ${name} x${qty} | Size: ${size} | Color: ${color}\n`;
+    });
+    msg += `\nSubtotal: ${formatPrice(subtotal)}\n`;
+    if (appliedCoupon) {
+      msg += `Coupon: ${appliedCoupon.code} (-${appliedCoupon.discount_percent}%)\n`;
+      msg += `Discount: -${formatPrice(discountAmount)}\n`;
+    }
+    msg += `Total: ${formatPrice(total)}`;
 
-    // Redirect the current tab to a confirmation page explaining that WhatsApp was opened
-    router.replace('/checkout/whatsapp');
+    const encodedMsg = encodeURIComponent(msg);
+    const waUrl = `https://wa.me/${ownerNumber}?text=${encodedMsg}`;
+    
+    // 3. Navigate straight to WhatsApp
+    // window.location.href is usually not blocked by popup blockers even after async calls
+    window.location.href = waUrl;
+
+    // 4. Clear Cart
+    clearCart();
+    try { localStorage.setItem('glee_cart_v1', JSON.stringify([])); } catch {}
+    
+    // 5. Redirect to success page after a short delay to allow WhatsApp to trigger
+    setTimeout(() => {
+      router.replace(`/checkout/success?orderId=${orderId}`);
+    }, 1000);
   };
 
   const placeOrder = async () => {
@@ -164,6 +239,8 @@ export default function CheckoutPage() {
         payment_method: 'manual',
         items,
         total_amount: total,
+        coupon_code: appliedCoupon?.code || null,
+        coupon_discount_percent: appliedCoupon?.discount_percent || null,
       };
 
       const res = await fetch('/api/orders', {
@@ -352,7 +429,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <button
-                  onClick={() => proceedToShipping()}
+                  onClick={() => handleWhatsAppCheckout()}
                   disabled={!isFormComplete}
                   className={`w-full py-4 rounded-full font-semibold flex items-center justify-center gap-2 transition-all ${
                     isFormComplete
@@ -360,9 +437,9 @@ export default function CheckoutPage() {
                       : 'bg-gray-300 text-gray-600 cursor-not-allowed'
                   }`}
                 >
-                  Continue to Shipping
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  Place Order via WhatsApp
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
                   </svg>
                 </button>
               </div>
@@ -412,6 +489,7 @@ export default function CheckoutPage() {
                         alt={item.name}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                       <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-xs rounded-full flex items-center justify-center">
                         {item.quantity}
@@ -431,9 +509,14 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   placeholder="Coupon code"
-                  className="grow px-4 py-3 border border-gray-200 text-black rounded-xl text-sm focus:ring-2 focus:ring-black/60 focus:border-transparent transition-all"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  className="grow px-4 py-3 border border-gray-200 text-black rounded-xl text-sm focus:ring-2 focus:ring-black/60 focus:border-transparent transition-all font-bold"
                 />
-                <button className="px-6 py-3 bg-gray-100 text-black rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors">
+                <button 
+                  onClick={handleApplyCoupon}
+                  className="px-6 py-3 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-colors shadow-md active:scale-95"
+                >
                   Apply
                 </button>
               </div>
@@ -444,13 +527,19 @@ export default function CheckoutPage() {
                   <span>Subtotal</span>
                   <span className="font-medium text-black">{formatPrice(subtotal)}</span>
                 </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm text-green-600 font-bold">
+                    <span>Discount ({appliedCoupon.discount_percent}%)</span>
+                    <span>-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
                   <span className="font-medium text-black">{shipping === 0 ? 'FREE' : formatPrice(shipping)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>GST (18%)</span>
-                  <span className="font-medium text-black">{formatPrice(gst)}</span>
+                <div className={`flex justify-between text-sm ${storeSettings.gst_enabled ? 'text-gray-600' : 'text-gray-400 opacity-70'}`}>
+                  <span>Estimated Tax</span>
+                  <span className={`font-medium ${storeSettings.gst_enabled ? 'text-black' : 'text-gray-400'}`}>{storeSettings.gst_enabled ? formatPrice(gst) : '—'}</span>
                 </div>
                 <div className="flex justify-between pt-3 border-t border-gray-100">
                   <span className="text-lg font-bold text-black">Total</span>

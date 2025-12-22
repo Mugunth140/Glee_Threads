@@ -5,6 +5,7 @@ export type CartItem = {
   size_name?: string;
   quantity: number;
   color?: string;
+  custom_image_url?: string;
   product?: {
     id: number;
     name?: string;
@@ -54,11 +55,12 @@ export function getCartCount(): number {
 
 export function addToCart(item: Omit<CartItem, 'id'>) {
   const items = readStore();
-  // try to find existing item by product_id + size_id + color (if provided)
+  // try to find existing item by product_id + size_id + color + custom_image
   const existing = items.find((it) =>
     it.product_id === item.product_id &&
     it.size_id === item.size_id &&
-    (it.color || '') === (item.color || '')
+    (it.color || '') === (item.color || '') &&
+    (it.custom_image_url || '') === (item.custom_image_url || '')
   );
   if (existing) {
     existing.quantity = (existing.quantity || 0) + (item.quantity || 1);
