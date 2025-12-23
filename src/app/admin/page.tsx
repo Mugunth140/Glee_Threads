@@ -84,29 +84,6 @@ export default function AdminDashboard() {
     fetchStats();
   }, [fetchStats]);
 
-  // Render client-side chart dynamically to avoid SSR issues
-  useEffect(() => {
-    const mount = async () => {
-      if (!stats.monthlyStats || stats.monthlyStats.length === 0) return;
-      const { default: SalesChart } = await import('@/components/SalesChart');
-      const data = stats.monthlyStats.map(s => ({ month: s.month, revenue: s.revenue }));
-
-      // render into placeholder
-      const root = document.getElementById('sales-chart-root');
-      if (!root) return;
-      // Create a container
-      const container = document.createElement('div');
-      root.innerHTML = '';
-      root.appendChild(container);
-
-      // Preact/React rendering without adding a dependency: use ReactDOM
-      // But since we already have React, dynamically import react-dom/client
-      const React = (await import('react')).default;
-      const { createRoot } = await import('react-dom/client');
-      createRoot(container).render(React.createElement(SalesChart, { data }));
-    };
-    mount();
-  }, [stats.monthlyStats]);
 
   const statCards = [
     {
@@ -240,67 +217,46 @@ export default function AdminDashboard() {
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Sales Chart Placeholder */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-black">Sales Overview</h3>
-              <p className="text-sm text-gray-500">Monthly revenue performance</p>
-            </div>
-            <select className="px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-600 outline-none">
-              <option>Last 6 months</option>
-              <option>Last year</option>
-              <option>All time</option>
-            </select>
-          </div>
-          {/* Sales Chart */}
-          <div>
-            {stats.monthlyStats && stats.monthlyStats.length > 0 ? (
-              // Pass monthlyStats as data to the chart component
-              <div>
-                {/* Import lazily with client component wrapper */}
-                <div id="sales-chart-root">
-                  {/* Client component renders here */}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-gray-500 py-10">No sales data available</div>
-            )}
-          </div>
-        </div>
-
+  
         {/* Top Categories */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-gray-100">
           <h3 className="text-lg font-semibold text-black mb-4">Top Categories</h3>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {stats.topCategories.length > 0 ? (
-              stats.topCategories.map((category, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 font-medium">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-black">{category.name}</p>
-                    <p className="text-xs text-gray-500">{category.product_count} products</p>
-                  </div>
-                  <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-black rounded-full"
-                      style={{ width: `${Math.min((category.product_count / (stats.totalProducts || 1)) * 100 * 3, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="space-y-4">
-                {['Graphic Tees', 'Plain Tees', 'Oversized Tees'].map((name, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 font-medium">
-                      {index + 1}
+              stats.topCategories.map((category, index) => {
+                const pct = Math.min((category.product_count / (stats.totalProducts || 1)) * 100, 100);
+                return (
+                  <div key={index} className="p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 font-medium">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-black">{category.name}</p>
+                          <p className="text-xs text-gray-500">{category.product_count} products</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-black">{name}</p>
-                      <p className="text-xs text-gray-500">-</p>
+
+                    <div className="mt-3 h-3 bg-gray-100 rounded-full overflow-hidden" role="img" aria-label={`${category.name} proportion`}>
+                      <div className="h-full bg-black rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {['Graphic Tees', 'Plain Tees', 'Oversized Tees'].map((name, index) => (
+                  <div key={index} className="p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 font-medium">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-black">{name}</p>
+                        <p className="text-xs text-gray-500">-</p>
+                      </div>
                     </div>
                   </div>
                 ))}
