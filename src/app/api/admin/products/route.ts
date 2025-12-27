@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
     try {
       // Count total
       const [countRows] = await pool.query<RowDataPacket[]>(`SELECT COUNT(*) as total FROM products`);
-      const total = Array.isArray(countRows) && (countRows[0] as any)?.total ? Number((countRows[0] as any).total) : 0;
+      const totalRow = (Array.isArray(countRows) && countRows[0]) ? (countRows[0] as RowDataPacket & { total?: number }) : undefined;
+      const total = totalRow && typeof totalRow.total === 'number' ? Number(totalRow.total) : 0;
 
       const offset = (page - 1) * pageSize;
 

@@ -92,7 +92,8 @@ export async function GET(request: NextRequest) {
 
     // Count total orders
     const [countRows] = await pool.query<RowDataPacket[]>(`SELECT COUNT(*) as total FROM orders`);
-    const total = Array.isArray(countRows) && (countRows[0] as any)?.total ? Number((countRows[0] as any).total) : 0;
+    const totalRow = (Array.isArray(countRows) && countRows[0]) ? (countRows[0] as RowDataPacket & { total?: number }) : undefined;
+    const total = totalRow && typeof totalRow.total === 'number' ? Number(totalRow.total) : 0;
 
     const offset = (page - 1) * pageSize;
 
@@ -132,17 +133,21 @@ export async function GET(request: NextRequest) {
         WHERE oi.order_id IN (${placeholders})
       `, orderIds);
 
-      const itemsByOrder: Record<number, any[]> = {};
-      for (const it of itemsRows as RowDataPacket[]) {
-        itemsByOrder[it.order_id] = itemsByOrder[it.order_id] || [];
-        itemsByOrder[it.order_id].push(it);
+      type ItemRow = RowDataPacket & { order_id: number };
+      const itemsByOrder: Record<number, ItemRow[]> = {};
+      for (const it of itemsRows as ItemRow[]) {
+        const oid = Number(it.order_id);
+        itemsByOrder[oid] = itemsByOrder[oid] || [];
+        itemsByOrder[oid].push(it);
       }
 
-      for (const order of orders) {
+      type OrderRow = RowDataPacket & { id: number; items?: ItemRow[] };
+      for (const order of orders as OrderRow[]) {
         order.items = itemsByOrder[order.id] || [];
       }
     } else {
-      for (const order of orders) order.items = [];
+      type OrderRow = RowDataPacket & { id: number; items?: unknown[] };
+      for (const order of orders as OrderRow[]) order.items = [];
     }
 
     return NextResponse.json({ orders, total, page, pageSize });

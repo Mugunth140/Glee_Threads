@@ -62,7 +62,8 @@ export async function GET(request: NextRequest) {
       (search ? ' AND (p.name LIKE ? OR p.description LIKE ?)' : '');
 
     const [countRows] = await pool.execute<RowDataPacket[]>(countQuery, params);
-    const total = Array.isArray(countRows) && (countRows[0] as any)?.total ? Number((countRows[0] as any).total) : 0;
+    const totalRow = (Array.isArray(countRows) && countRows[0]) ? (countRows[0] as RowDataPacket & { total?: number }) : undefined;
+    const total = totalRow && typeof totalRow.total === 'number' ? Number(totalRow.total) : 0;
 
     // Some installations may not have `p.sizes` column yet. Try the full query first
     // and fall back to a safer query if it fails.

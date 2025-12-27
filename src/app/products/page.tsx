@@ -7,7 +7,7 @@ import { Category, Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
 // useSearchParams causes prerendering issues during build; use window.location in a client-only effect instead
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // Format price in Indian Rupees
 const formatPrice = (price: number) => {
@@ -18,6 +18,13 @@ const formatPrice = (price: number) => {
     maximumFractionDigits: 0,
   }).format(price);
 };
+
+const PRICE_RANGES = [
+  { key: 'under-999', label: 'Under ₹999', min: 0, max: 998 },
+  { key: '999-1499', label: '₹999 - ₹1,499', min: 999, max: 1499 },
+  { key: '1500-2499', label: '₹1,500 - ₹2,499', min: 1500, max: 2499 },
+  { key: '2500+', label: '₹2,500+', min: 2500, max: Infinity },
+];
 
 export default function ProductsPage() {
   // const searchParams = useSearchParams();
@@ -38,12 +45,6 @@ export default function ProductsPage() {
   const [totalProducts, setTotalProducts] = useState<number>(0);
 
   const styles = ['Graphic', 'Plain', 'Oversized', 'Premium', 'Custom'];
-  const PRICE_RANGES = [
-    { key: 'under-999', label: 'Under ₹999', min: 0, max: 998 },
-    { key: '999-1499', label: '₹999 - ₹1,499', min: 999, max: 1499 },
-    { key: '1500-2499', label: '₹1,500 - ₹2,499', min: 1500, max: 2499 },
-    { key: '2500+', label: '₹2,500+', min: 2500, max: Infinity },
-  ];
 
   const fetchCategories = async () => {
     try {
@@ -55,7 +56,7 @@ export default function ProductsPage() {
     }
   };
 
-  const fetchProducts = async (requestedPage = 1, append = false) => {
+  const fetchProducts = useCallback(async (requestedPage = 1, append = false) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -131,14 +132,14 @@ export default function ProductsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCategory, selectedStyle, sortBy, searchQuery, selectedPriceRange, selectedSizeFilter]);
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
   // Update the browser URL with current filters and page
-  const updateUrlWithParams = (requestedPage: number) => {
+  const updateUrlWithParams = useCallback((requestedPage: number) => {
     try {
       const params = new URLSearchParams(window.location.search);
       if (selectedCategory) params.set('category', selectedCategory);
@@ -151,7 +152,7 @@ export default function ProductsPage() {
     } catch {
       // ignore
     }
-  };
+  }, [selectedCategory, searchQuery]);
 
   // Navigate to a page (page-based pagination)
   const goToPage = (requestedPage: number) => {
@@ -187,7 +188,7 @@ export default function ProductsPage() {
     readParamsFromUrl();
     window.addEventListener('popstate', readParamsFromUrl);
     return () => window.removeEventListener('popstate', readParamsFromUrl);
-  }, []);
+  }, [fetchProducts]);
 
   useEffect(() => {
     // Reset to first page when filters/search change
@@ -195,8 +196,11 @@ export default function ProductsPage() {
     setPage(1);
     fetchProducts(1, false);
     updateUrlWithParams(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter, searchQuery]);
+  }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter, searchQuery, fetchProducts, updateUrlWithParams]);
+
+  // Ensure PRICE_RANGES is included as dependency for fetchProducts
+  // and keep fetchProducts stable. (eslint wants explicit dependency)
+  // No runtime change expected since PRICE_RANGES is a constant above.
 
   return (
     <div className="min-h-screen bg-white">

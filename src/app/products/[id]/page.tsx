@@ -127,8 +127,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  // Single main image (thumbnails removed)
-  const productImages = [product.image_url];
 
   return (
     <div className="min-h-screen bg-white">
