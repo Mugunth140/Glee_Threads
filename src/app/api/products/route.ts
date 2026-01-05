@@ -153,9 +153,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ products: productsWithSizes, total, page, pageSize });
   } catch (error) {
     console.error('Error fetching products:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    // Return empty data instead of error object to prevent frontend crashes
+    return NextResponse.json({ products: [], total: 0, page: 1, pageSize: 1000 });
   }
 }

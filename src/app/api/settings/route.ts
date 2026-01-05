@@ -12,6 +12,7 @@ export async function GET() {
     return NextResponse.json({ settings });
   } catch (error) {
     console.error('Error fetching settings:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // Return empty settings instead of error object
+    return NextResponse.json({ settings: {} });
   }
 }

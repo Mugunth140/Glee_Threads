@@ -36,9 +36,7 @@ export async function GET() {
     return NextResponse.json(heroProducts);
   } catch (error) {
     console.error('Error fetching hero products:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch hero products' },
-      { status: 500 }
-    );
+    // Return empty array instead of error object to prevent frontend .map() errors
+    return NextResponse.json([]);
   }
 }

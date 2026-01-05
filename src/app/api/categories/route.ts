@@ -10,9 +10,7 @@ export async function GET() {
     return NextResponse.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    // Return empty array instead of error object to prevent frontend .map() errors
+    return NextResponse.json([]);
   }
 }
