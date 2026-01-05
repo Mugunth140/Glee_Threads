@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
 
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('adminUser', JSON.stringify(data.user));
-      
+
       router.push('/admin');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -46,10 +46,10 @@ export default function AdminLoginPage() {
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="flex items-center justify-center gap-1 mb-10 lg:hidden">
-            <Image 
-              src="/glee_logo.png" 
-              alt="Glee Logo" 
-              width={32} 
+            <Image
+              src="/glee_logo.png"
+              alt="Glee Logo"
+              width={32}
               height={32}
               className="object-contain"
             />
@@ -80,7 +80,7 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-black placeholder-gray-400 focus:ring-2 focus:ring-black focus:border-transparent"
-                  placeholder="admin@gleethreads.com"
+                  placeholder="admin@gleethreads.in"
                 />
               </div>
 

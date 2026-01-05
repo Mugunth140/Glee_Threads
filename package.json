@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node ./scripts/seed-admin.js",
     "start": "next start",
     "lint": "eslint",
     "backfill:sizes": "node scripts/backfill-sizes.js",
