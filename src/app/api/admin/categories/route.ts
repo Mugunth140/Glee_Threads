@@ -57,6 +57,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to generate a slug from a string
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .replace(/-+/g, '-');     // Remove duplicate hyphens
+}
+
 export async function POST(request: NextRequest) {
   const admin = verifyAdmin(request);
   if (!admin) {
@@ -65,20 +75,23 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, image_url } = body;
+    const { name, description, image_url, slug: providedSlug } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Category name is required' }, { status: 400 });
     }
 
+    // Use provided slug or generate one from the name
+    const slug = providedSlug || generateSlug(name);
+
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO categories (name, description, image_url) VALUES (?, ?, ?)',
-      [name, description || '', image_url || '']
+      'INSERT INTO categories (name, slug, description, image_url) VALUES (?, ?, ?, ?)',
+      [name, slug, description || '', image_url || '']
     );
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Category created successfully',
-      categoryId: result.insertId 
+      categoryId: result.insertId
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);

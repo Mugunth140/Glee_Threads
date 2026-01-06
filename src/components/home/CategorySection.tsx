@@ -1,15 +1,62 @@
+'use client';
+
+import { Category } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-const categories = [
-    { name: 'Graphic', image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=1000' },
-    { name: 'Plain', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=1000' },
-    { name: 'Oversized', image: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?q=80&w=1000' },
-    { name: 'Premium', image: 'https://images.unsplash.com/photo-1562157873-818bc0726f68?q=80&w=1000' },
-    { name: 'Custom', image: 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?q=80&w=1000' }
-];
+// Default placeholder image for categories without images
+const DEFAULT_CATEGORY_IMAGE = 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=1000';
 
 export default function CategorySection() {
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    setCategories(data);
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchCategories();
+    }, []);
+
+    if (loading) {
+        return (
+            <section className="py-16 border-y border-gray-100 bg-gray-50/30">
+                <div className="container mx-auto px-4 lg:px-8">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+                        <div>
+                            <h2 className="text-3xl font-bold text-black mb-2">Shop by Category</h2>
+                            <p className="text-gray-500">Find the style that suits you best</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                        {[...Array(5)].map((_, idx) => (
+                            <div
+                                key={idx}
+                                className={`animate-pulse bg-gray-200 rounded-3xl ${idx === 0 || idx === 1 ? 'md:col-span-3 aspect-2/1' : 'md:col-span-2 aspect-square'
+                                    }`}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    if (categories.length === 0) {
+        return null; // Don't show section if no categories
+    }
+
     return (
         <section className="py-16 border-y border-gray-100 bg-gray-50/30">
             <div className="container mx-auto px-4 lg:px-8">
@@ -29,16 +76,16 @@ export default function CategorySection() {
                     </Link>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    {categories.map((cat, idx) => (
+                    {categories.slice(0, 5).map((cat, idx) => (
                         <Link
-                            key={cat.name}
-                            href={`/products?category=${cat.name.toLowerCase()}`}
+                            key={cat.id}
+                            href={`/products?category=${cat.slug}`}
                             className={`group relative flex flex-col justify-between p-8 rounded-3xl bg-black border border-gray-100 overflow-hidden
                 ${idx === 0 || idx === 1 ? 'md:col-span-3 aspect-2/1' : 'md:col-span-2 aspect-square'}
               `}
                         >
                             <Image
-                                src={cat.image}
+                                src={cat.image_url || DEFAULT_CATEGORY_IMAGE}
                                 alt={cat.name}
                                 fill
                                 className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-50"

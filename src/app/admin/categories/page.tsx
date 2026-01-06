@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Category {
   id: number;
@@ -26,6 +26,12 @@ export default function AdminCategoriesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Image upload states
+  const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const router = useRouter();
 
   const fetchCategories = useCallback(async () => {
@@ -36,12 +42,12 @@ export default function AdminCategoriesPage() {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (res.status === 401) {
-         localStorage.removeItem('adminToken');
-         localStorage.removeItem('adminUser');
-         router.push('/admin/login');
-         return;
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        router.push('/admin/login');
+        return;
       }
 
       if (res.ok) {
@@ -67,11 +73,57 @@ export default function AdminCategoriesPage() {
         description: category.description || '',
         image_url: category.image_url || ''
       });
+      setPreviewImage(category.image_url || null);
     } else {
       setEditingCategory(null);
       setFormData({ name: '', description: '', image_url: '' });
+      setPreviewImage(null);
     }
     setShowModal(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Show preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewImage(objectUrl);
+    setUploading(true);
+
+    try {
+      const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const blob = await response.json();
+      setFormData(prev => ({ ...prev, image_url: blob.url }));
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload image. Please try again.');
+      setPreviewImage(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setPreviewImage(null);
+    setFormData(prev => ({ ...prev, image_url: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,6 +151,7 @@ export default function AdminCategoriesPage() {
         setShowModal(false);
         setEditingCategory(null);
         setFormData({ name: '', description: '', image_url: '' });
+        setPreviewImage(null);
       } else {
         const data = await res.json();
         alert(data.error || 'Failed to save category');
@@ -113,7 +166,7 @@ export default function AdminCategoriesPage() {
 
   const handleDelete = async () => {
     if (!categoryToDelete) return;
-    
+
     setDeleting(true);
     try {
       const token = localStorage.getItem('adminToken');
@@ -123,7 +176,7 @@ export default function AdminCategoriesPage() {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (res.ok) {
         setCategories(categories.filter(c => c.id !== categoryToDelete.id));
         setShowDeleteModal(false);
@@ -152,7 +205,6 @@ export default function AdminCategoriesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* <h1 className="text-2xl font-bold text-black/80">Categories</h1> */}
         <button
           onClick={() => openModal()}
           className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-xl font-medium hover:bg-gray-800 transition-colors"
@@ -193,7 +245,7 @@ export default function AdminCategoriesPage() {
                   </div>
                 )}
               </div>
-              
+
               {/* Category Info */}
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -243,7 +295,7 @@ export default function AdminCategoriesPage() {
             <h3 className="text-lg font-semibold text-black mb-6">
               {editingCategory ? 'Edit Category' : 'Add New Category'}
             </h3>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-2">
@@ -272,16 +324,55 @@ export default function AdminCategoriesPage() {
                 />
               </div>
 
+              {/* Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-2">
-                  Image URL
+                  Category Image
                 </label>
+
+                {previewImage || formData.image_url ? (
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 mb-2">
+                    <Image
+                      src={previewImage || formData.image_url}
+                      alt="Category preview"
+                      fill
+                      className="object-cover"
+                    />
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      title="Remove image"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                  >
+                    <svg className="w-10 h-10 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-sm text-gray-500">Click to upload an image</p>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
+                  </div>
+                )}
+
                 <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black/10"
-                  placeholder="https://example.com/image.jpg"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
                 />
               </div>
 
@@ -292,20 +383,21 @@ export default function AdminCategoriesPage() {
                     setShowModal(false);
                     setEditingCategory(null);
                     setFormData({ name: '', description: '', image_url: '' });
+                    setPreviewImage(null);
                   }}
                   className="px-4 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
-                  disabled={saving}
+                  disabled={saving || uploading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
-                  disabled={saving}
+                  className="px-4 py-2 bg-black text-white font-medium rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+                  disabled={saving || uploading}
                 >
                   {saving ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
                       Saving...
                     </>
                   ) : (
@@ -328,7 +420,7 @@ export default function AdminCategoriesPage() {
             </p>
             {categoryToDelete.product_count > 0 && (
               <p className="text-red-400 text-sm mb-4">
-                Warning: This category has {categoryToDelete.product_count} products. 
+                Warning: This category has {categoryToDelete.product_count} products.
                 You must move or delete those products first.
               </p>
             )}
@@ -345,7 +437,7 @@ export default function AdminCategoriesPage() {
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-black rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                 disabled={deleting || categoryToDelete.product_count > 0}
               >
                 {deleting ? (

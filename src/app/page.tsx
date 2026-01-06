@@ -25,7 +25,6 @@ async function getHomePageData() {
         p.price,
         p.image_url,
         p.category_id,
-        p.is_active,
         c.name as category_name,
         fp.position
       FROM featured_products fp
@@ -43,7 +42,7 @@ async function getHomePageData() {
       image_url: r.image_url,
       category_id: r.category_id,
       category_name: r.category_name,
-      is_active: r.is_active,
+      is_active: true,
       position: r.position,
       sizes: []
     })) as Product[];
@@ -58,7 +57,6 @@ async function getHomePageData() {
         p.price,
         p.image_url,
         p.category_id,
-        p.is_active,
         c.name as category_name
       FROM hero_products hp
       JOIN products p ON hp.product_id = p.id
@@ -78,7 +76,7 @@ async function getHomePageData() {
         image_url: row.image_url,
         category_id: row.category_id,
         category_name: row.category_name,
-        is_active: row.is_active,
+        is_active: true,
         sizes: []
       }
     })) as HeroProduct[];
