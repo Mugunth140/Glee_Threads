@@ -115,13 +115,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name, price, and category are required' }, { status: 400 });
     }
 
-    // Insert product
-    const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO products (name, description, price, image_url, category_id, is_out_of_stock, material, care_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0, material || null, care_instructions || null]
-    );
-
-    const productId = result.insertId;
+    // Insert product - try with all columns first, fall back to basic columns if some don't exist
+    let productId: number;
+    try {
+      const [result] = await pool.query<ResultSetHeader>(
+        'INSERT INTO products (name, description, price, image_url, category_id, is_out_of_stock, material, care_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [name, description || '', price, image_url || '', category_id, is_out_of_stock ? 1 : 0, material || null, care_instructions || null]
+      );
+      productId = result.insertId;
+    } catch (insertError) {
+      console.warn('Full product insert failed, trying without optional columns:', (insertError as Error).message);
+      // Fallback: insert without optional columns that may not exist
+      try {
+        const [result] = await pool.query<ResultSetHeader>(
+          'INSERT INTO products (name, description, price, image_url, category_id) VALUES (?, ?, ?, ?, ?)',
+          [name, description || '', price, image_url || '', category_id]
+        );
+        productId = result.insertId;
+      } catch (fallbackError) {
+        console.error('Fallback insert also failed:', fallbackError);
+        throw fallbackError;
+      }
+    }
 
     // Store colors if provided. Create product_colors table if missing.
     if (colors && Array.isArray(colors) && colors.length > 0) {
@@ -157,9 +172,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Product created successfully',
-      productId 
+      productId
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating product:', error);

@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   // Skip layout for login page
   const isLoginPage = pathname === '/admin/login';
-  
+
   // Derive loading state instead of using setState
   const isLoading = useMemo(() => {
     if (isLoginPage) return false;
@@ -57,13 +57,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             // Update admin state from verified token data if available, or keep using localStorage user for display name
             // Better to use data from verify if it returns user info
             if (data.user) {
-                setAdmin(data.user);
+              setAdmin(data.user);
             } else {
-                // Fallback to local storage if verify doesn't return user details (though we implemented it to return them)
-                try {
-                    const storedUser = localStorage.getItem('adminUser');
-                    if (storedUser) setAdmin(JSON.parse(storedUser));
-                } catch {}
+              // Fallback to local storage if verify doesn't return user details (though we implemented it to return them)
+              try {
+                const storedUser = localStorage.getItem('adminUser');
+                if (storedUser) setAdmin(JSON.parse(storedUser));
+              } catch { }
             }
             setAuthChecked(true);
           });
@@ -181,17 +181,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         className={`fixed lg:static inset-y-0 left-0 z-120 w-64 ${!sidebarOpen && 'lg:w-20'} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} h-screen overflow-hidden`}
       >
         {/* Logo */}
-        <div className="h-16 px-4 border-b border-gray-100 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center justify-center gap-0.5">
-            <Image 
-              src="/glee_logo.png" 
-              alt="Glee Logo" 
-              width={24} 
-              height={24}
+        <div className={`h-16 px-4 border-b border-gray-100 flex items-center ${!sidebarOpen ? 'justify-center' : 'justify-between'}`}>
+          <Link
+            href="/admin"
+            className={`flex items-center justify-center gap-1 ${!sidebarOpen && 'lg:hidden'}`}
+          >
+            <Image
+              src="/glee_logo.png"
+              alt="Glee Logo"
+              width={32}
+              height={32}
               className="object-contain shrink-0"
             />
             <div className={`${!sidebarOpen && 'lg:hidden'}`}>
-              <span className="text-3xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
+              <span className="text-2xl font-extrabold text-black tracking-tight" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
             </div>
           </Link>
           <button
@@ -222,11 +225,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-black text-white'
-                    : 'text-gray-600 hover:text-black hover:bg-gray-100'
-                } ${!sidebarOpen && 'lg:justify-center lg:px-2'}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
+                  ? 'bg-black text-white'
+                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
+                  } ${!sidebarOpen && 'lg:justify-center lg:px-2'}`}
               >
                 {item.icon}
                 <span className={`font-medium ${!sidebarOpen && 'lg:hidden'}`}>{item.label}</span>
