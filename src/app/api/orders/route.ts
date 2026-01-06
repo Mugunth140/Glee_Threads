@@ -2,8 +2,40 @@ import pool from '@/lib/db';
 import { ResultSetHeader } from 'mysql2';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Ensure orders table has required columns (runs once per cold start)
+let ordersTableChecked = false;
+async function ensureOrdersColumns() {
+  if (ordersTableChecked) return;
+  try {
+    // Add missing columns if they don't exist
+    const alterQueries = [
+      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_name VARCHAR(255)",
+      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_email VARCHAR(255)",
+      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone VARCHAR(32)",
+      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50)",
+    ];
+    for (const q of alterQueries) {
+      try {
+        await pool.query(q);
+      } catch (e: unknown) {
+        // Ignore if column already exists or syntax not supported
+        const code = typeof e === 'object' && e !== null && 'code' in e ? (e as { code?: string }).code : '';
+        if (code !== 'ER_DUP_FIELDNAME') {
+          console.warn('Alter orders table warning:', (e as Error).message);
+        }
+      }
+    }
+    ordersTableChecked = true;
+  } catch (err) {
+    console.warn('Could not ensure orders columns:', err);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Ensure table has required columns
+    await ensureOrdersColumns();
+    
     const body = await request.json();
     const {
       name,
@@ -44,23 +76,48 @@ export async function POST(request: NextRequest) {
       custom_options?: Record<string, unknown>;
     };
 
-    const itemInserts = (items as OrderItemPayload[]).map((it) => [
-      insertId, 
-      (it.product_id && it.product_id > 0) ? it.product_id : null, // Handle custom products (id -1) as NULL
-      it.quantity, 
-      it.size || null, 
-      it.price,
-      it.custom_color || null,
-      it.custom_image_url || null,
-      it.custom_text || null,
-      it.custom_options ? JSON.stringify(it.custom_options) : null
-    ]);
-
-    if (itemInserts.length > 0) {
-      await pool.query(
-        'INSERT INTO order_items (order_id, product_id, quantity, size, price, custom_color, custom_image_url, custom_text, custom_options) VALUES ?',
-        [itemInserts]
-      );
+    // Try to insert order items - with custom_options first, fallback to without
+    const itemsArray = items as OrderItemPayload[];
+    if (itemsArray.length > 0) {
+      try {
+        // Try with custom_options column
+        const itemInsertsWithOptions = itemsArray.map((it) => [
+          insertId, 
+          (it.product_id && it.product_id > 0) ? it.product_id : null,
+          it.quantity, 
+          it.size || null, 
+          it.price,
+          it.custom_color || null,
+          it.custom_image_url || null,
+          it.custom_text || null,
+          it.custom_options ? JSON.stringify(it.custom_options) : null
+        ]);
+        await pool.query(
+          'INSERT INTO order_items (order_id, product_id, quantity, size, price, custom_color, custom_image_url, custom_text, custom_options) VALUES ?',
+          [itemInsertsWithOptions]
+        );
+      } catch (itemError: unknown) {
+        // If custom_options column doesn't exist, try without it
+        if (typeof itemError === 'object' && itemError !== null && 'code' in itemError && (itemError as { code?: string }).code === 'ER_BAD_FIELD_ERROR') {
+          console.warn('custom_options column not found, inserting without it');
+          const itemInsertsBasic = itemsArray.map((it) => [
+            insertId, 
+            (it.product_id && it.product_id > 0) ? it.product_id : null,
+            it.quantity, 
+            it.size || null, 
+            it.price,
+            it.custom_color || null,
+            it.custom_image_url || null,
+            it.custom_text || null
+          ]);
+          await pool.query(
+            'INSERT INTO order_items (order_id, product_id, quantity, size, price, custom_color, custom_image_url, custom_text) VALUES ?',
+            [itemInsertsBasic]
+          );
+        } else {
+          throw itemError;
+        }
+      }
     }
 
     return NextResponse.json({ success: true, order_id: insertId });

@@ -51,26 +51,35 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS orders (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT,
+  user_id INT NULL,
+  user_name VARCHAR(255),
+  user_email VARCHAR(255),
+  phone VARCHAR(32),
   status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
   total_amount DECIMAL(10, 2) NOT NULL,
   coupon_code VARCHAR(50) NULL,
   coupon_discount_percent INT NULL,
   shipping_address TEXT,
+  payment_method VARCHAR(50),
   payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT,
-  product_id INT,
+  product_id INT NULL,
   quantity INT NOT NULL,
-  price_at_time DECIMAL(10, 2) NOT NULL,
-  size VARCHAR(10),
+  price DECIMAL(10, 2) NOT NULL,
+  size VARCHAR(32),
   color VARCHAR(50),
-  FOREIGN KEY (order_id) REFERENCES orders(id),
+  custom_color VARCHAR(20) NULL,
+  custom_image_url VARCHAR(1000) NULL,
+  custom_text TEXT NULL,
+  custom_options JSON NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
