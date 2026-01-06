@@ -34,7 +34,7 @@ async function getHomePageData() {
       LIMIT 8
     `);
 
-    const featuredProducts = (featuredRows as any[]).map(r => ({
+    const featuredProducts = (featuredRows as RowDataPacket[]).map(r => ({
       id: r.id,
       name: r.name,
       description: r.description,
@@ -64,7 +64,7 @@ async function getHomePageData() {
       ORDER BY hp.position ASC
     `);
 
-    const heroProducts = (heroRows as any[]).map(row => ({
+    const heroProducts = (heroRows as RowDataPacket[]).map(row => ({
       id: row.id,
       product_id: row.product_id,
       position: row.position,

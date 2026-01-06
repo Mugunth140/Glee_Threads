@@ -3,7 +3,7 @@
 import { Category, Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Format price in Indian Rupees
 const formatPrice = (price: number) => {
@@ -23,7 +23,6 @@ const PRICE_RANGES = [
 ];
 
 export default function ProductsClient() {
-  // const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -40,30 +39,47 @@ export default function ProductsClient() {
   const [page, setPage] = useState<number>(1);
   const [totalProducts, setTotalProducts] = useState<number>(0);
 
+  // Track if initial load from URL is done
+  const isInitialized = useRef(false);
+  const skipNextUrlUpdate = useRef(false);
+
   const styles = ['Graphic', 'Plain', 'Oversized', 'Premium', 'Custom'];
 
   const fetchCategories = async () => {
     try {
       const response = await fetch('/api/categories');
       const data = await response.json();
-      setCategories(data);
+      if (Array.isArray(data)) {
+        setCategories(data);
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
   };
 
-  const fetchProducts = useCallback(async (requestedPage = 1, append = false) => {
+  const fetchProducts = useCallback(async (
+    requestedPage: number,
+    append: boolean,
+    filters: {
+      category: string;
+      style: string;
+      sort: string;
+      search: string;
+      priceRange: string;
+      sizeFilter: string;
+    }
+  ) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedCategory) params.set('category', selectedCategory);
-      if (selectedStyle) params.set('style', selectedStyle);
-      if (sortBy) params.set('sort', sortBy);
-      if (searchQuery) params.set('search', searchQuery);
+      if (filters.category) params.set('category', filters.category);
+      if (filters.style) params.set('style', filters.style);
+      if (filters.sort) params.set('sort', filters.sort);
+      if (filters.search) params.set('search', filters.search);
       params.set('page', String(requestedPage));
       params.set('pageSize', String(PAGE_SIZE));
       const url = `/api/products?${params.toString()}`;
-      console.debug('Fetching products from', url, { selectedCategory, selectedStyle, sortBy, searchQuery, requestedPage });
+
       const response = await fetch(url);
       const data = await response.json();
 
@@ -77,18 +93,11 @@ export default function ProductsClient() {
         items = [];
       }
 
-      // Only include products that are visible. If API provides `is_visible` use it,
-      // otherwise fall back to `is_active`.
-      const visible = items.filter((p) => {
-        if (typeof p.is_visible !== 'undefined') return !!p.is_visible;
-        return !!p.is_active;
-      });
-
-      // Apply client-side size and price filters (server-side filtering may not be available on all DBs)
-      const filtered = visible.filter((p) => {
+      // Apply client-side size and price filters
+      const filtered = items.filter((p) => {
         // Price filter
-        if (selectedPriceRange) {
-          const range = PRICE_RANGES.find(r => r.key === selectedPriceRange);
+        if (filters.priceRange) {
+          const range = PRICE_RANGES.find(r => r.key === filters.priceRange);
           if (range) {
             const priceNum = Number(p.price || 0);
             if (priceNum < range.min || priceNum > (range.max === Infinity ? Number.MAX_SAFE_INTEGER : range.max)) return false;
@@ -96,14 +105,14 @@ export default function ProductsClient() {
         }
 
         // Size filter
-        if (selectedSizeFilter) {
+        if (filters.sizeFilter) {
           const sizes = p.sizes || [];
           const names = Array.isArray(sizes)
             ? sizes
               .map((s: unknown) => (typeof s === 'string' ? String(s) : ((s as { size_name?: string })?.size_name ?? String(s))))
               .map(n => n.toUpperCase())
             : [];
-          if (!names.includes(selectedSizeFilter.toUpperCase())) return false;
+          if (!names.includes(filters.sizeFilter.toUpperCase())) return false;
         }
 
         return true;
@@ -128,75 +137,129 @@ export default function ProductsClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCategory, selectedStyle, sortBy, searchQuery, selectedPriceRange, selectedSizeFilter]);
+  }, []);
 
+  // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  // Update the browser URL with current filters and page
-  const updateUrlWithParams = useCallback((requestedPage: number) => {
+  // Initial load: read from URL
+  useEffect(() => {
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
     try {
       const params = new URLSearchParams(window.location.search);
-      if (selectedCategory) params.set('category', selectedCategory);
-      else params.delete('category');
-      if (searchQuery) params.set('search', searchQuery);
-      else params.delete('search');
-      params.set('page', String(requestedPage));
-      const newUrl = `${window.location.pathname}?${params.toString()}`;
-      window.history.pushState(null, '', newUrl);
-    } catch {
-      // ignore
-    }
-  }, [selectedCategory, searchQuery]);
+      const category = params.get('category') || '';
+      const search = params.get('search') || '';
+      const pageParam = Number(params.get('page') || '1') || 1;
 
-  // Navigate to a page (page-based pagination)
+      skipNextUrlUpdate.current = true;
+      setSelectedCategory(category);
+      setSearchQuery(search);
+      setPage(pageParam);
+
+      fetchProducts(pageParam, false, {
+        category,
+        style: '',
+        sort: '',
+        search,
+        priceRange: '',
+        sizeFilter: '',
+      });
+    } catch {
+      fetchProducts(1, false, {
+        category: '',
+        style: '',
+        sort: '',
+        search: '',
+        priceRange: '',
+        sizeFilter: '',
+      });
+    }
+
+    // Handle browser back/forward
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const category = params.get('category') || '';
+      const search = params.get('search') || '';
+      const pageParam = Number(params.get('page') || '1') || 1;
+
+      skipNextUrlUpdate.current = true;
+      setSelectedCategory(category);
+      setSearchQuery(search);
+      setPage(pageParam);
+
+      fetchProducts(pageParam, false, {
+        category,
+        style: selectedStyle,
+        sort: sortBy,
+        search,
+        priceRange: selectedPriceRange,
+        sizeFilter: selectedSizeFilter,
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [fetchProducts, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter]);
+
+  // Update URL when filters change (debounced)
+  const updateUrl = useCallback((category: string, search: string, pageNum: number) => {
+    if (skipNextUrlUpdate.current) {
+      skipNextUrlUpdate.current = false;
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (category) params.set('category', category);
+      if (search) params.set('search', search);
+      if (pageNum > 1) params.set('page', String(pageNum));
+
+      const newUrl = params.toString() ? `/products?${params.toString()}` : '/products';
+      window.history.replaceState(null, '', newUrl);
+    } catch {
+      // Ignore URL update errors
+    }
+  }, []);
+
+  // Fetch when filters change (not on initial load)
+  useEffect(() => {
+    if (!isInitialized.current) return;
+
+    setProducts([]);
+    fetchProducts(1, false, {
+      category: selectedCategory,
+      style: selectedStyle,
+      sort: sortBy,
+      search: searchQuery,
+      priceRange: selectedPriceRange,
+      sizeFilter: selectedSizeFilter,
+    });
+
+    updateUrl(selectedCategory, searchQuery, 1);
+  }, [selectedCategory, selectedStyle, sortBy, searchQuery, selectedPriceRange, selectedSizeFilter, fetchProducts, updateUrl]);
+
+  // Navigate to a page
   const goToPage = (requestedPage: number) => {
     if (requestedPage < 1) return;
     const totalPages = Math.max(1, Math.ceil((totalProducts || 0) / PAGE_SIZE));
     if (requestedPage > totalPages) return;
+
     setProducts([]);
-    setPage(requestedPage);
-    fetchProducts(requestedPage, false);
-    updateUrlWithParams(requestedPage);
+    fetchProducts(requestedPage, false, {
+      category: selectedCategory,
+      style: selectedStyle,
+      sort: sortBy,
+      search: searchQuery,
+      priceRange: selectedPriceRange,
+      sizeFilter: selectedSizeFilter,
+    });
+
+    updateUrl(selectedCategory, searchQuery, requestedPage);
   };
-
-  useEffect(() => {
-    // Read category and page from browser URL on mount and when navigation occurs
-    const readParamsFromUrl = () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const category = params.get('category');
-        const search = params.get('search');
-        const pageParam = Number(params.get('page') || '1') || 1;
-        setSelectedCategory(category || '');
-        setSearchQuery(search || '');
-        setPage(pageParam);
-        // Fetch the requested page when navigating via back/forward
-        fetchProducts(pageParam, false);
-      } catch {
-        setSelectedCategory('');
-        setSearchQuery('');
-        setPage(1);
-        fetchProducts(1, false);
-      }
-    };
-    readParamsFromUrl();
-    window.addEventListener('popstate', readParamsFromUrl);
-    return () => window.removeEventListener('popstate', readParamsFromUrl);
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    // Reset to first page when filters/search change
-    setProducts([]);
-    setPage(1);
-    fetchProducts(1, false);
-    updateUrlWithParams(1);
-  }, [selectedCategory, selectedStyle, sortBy, selectedPriceRange, selectedSizeFilter, searchQuery, fetchProducts, updateUrlWithParams]);
-
-  // Ensure PRICE_RANGES is included as dependency for fetchProducts
-  // and keep fetchProducts stable. (eslint wants explicit dependency)
-  // No runtime change expected since PRICE_RANGES is a constant above.
 
   return (
     <div className="min-h-screen bg-white">
@@ -223,8 +286,8 @@ export default function ProductsClient() {
             <button
               onClick={() => setSelectedCategory('')}
               className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${selectedCategory === ''
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               All
@@ -234,8 +297,8 @@ export default function ProductsClient() {
                 key={category.id}
                 onClick={() => setSelectedCategory(category.slug)}
                 className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all ${selectedCategory === category.slug
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 {category.name}
@@ -259,7 +322,7 @@ export default function ProductsClient() {
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-3 border border-gray-200 rounded-full text-sm font-medium bg-white text-black/80 hover:border-gray-500 transition-colors focus:outline-none focus:border-gray-600"
             >
-              <option value="default">Sort By</option>
+              <option value="">Sort By</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
               <option value="newest">Newest First</option>
@@ -281,8 +344,8 @@ export default function ProductsClient() {
                       key={style}
                       onClick={() => setSelectedStyle(selectedStyle === style ? '' : style)}
                       className={`px-4 py-2 rounded-full text-sm transition-all ${selectedStyle === style
-                          ? 'bg-primary text-white'
-                          : 'bg-white border border-gray-200 text-gray-700 hover:border-black'
+                        ? 'bg-primary text-white'
+                        : 'bg-white border border-gray-200 text-gray-700 hover:border-black'
                         }`}
                     >
                       {style}
@@ -335,8 +398,6 @@ export default function ProductsClient() {
                   setSelectedPriceRange('');
                   setSelectedSizeFilter('');
                   setSearchQuery('');
-                  // Clear URL params
-                  window.history.pushState({}, '', '/products');
                 }}
                 className="text-sm font-medium text-black hover:underline"
               >
@@ -385,7 +446,7 @@ export default function ProductsClient() {
               >
                 <div className="relative aspect-4/5 rounded-2xl overflow-hidden bg-gray-100 mb-4">
                   <Image
-                    src={product.image_url}
+                    src={product.image_url || '/glee_logo.png'}
                     alt={product.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -395,7 +456,6 @@ export default function ProductsClient() {
                   <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <button className="w-full py-3 bg-white text-black text-sm font-semibold rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors">
                       Quick Add
-                      {/* Reset price & size filters when clearing */}
                     </button>
                   </div>
                 </div>
