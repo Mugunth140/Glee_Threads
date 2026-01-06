@@ -18,8 +18,49 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Glee Threads - Premium T-Shirts & Custom Designs",
+  metadataBase: new URL('https://gleethreads.com'), // Replace with actual domain
+  title: {
+    default: "Glee Threads - Premium T-Shirts & Custom Designs",
+    template: "%s | Glee Threads"
+  },
   description: "Your destination for custom and ready-made t-shirts. Create your unique style or choose from our curated collection. Located in Siddhapudur, Coimbatore.",
+  keywords: ["custom t-shirts", "printed t-shirts", "coimbatore t-shirts", "glee threads", "clothing store"],
+  authors: [{ name: "Glee Threads" }],
+  creator: "Glee Threads",
+  publisher: "Glee Threads",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://gleethreads.com",
+    title: "Glee Threads - Premium T-Shirts & Custom Designs",
+    description: "Your destination for custom and ready-made t-shirts. Create your unique style or choose from our curated collection.",
+    siteName: "Glee Threads",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Glee Threads",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Glee Threads - Premium T-Shirts & Custom Designs",
+    description: "Your destination for custom and ready-made t-shirts. Create your unique style or choose from our curated collection.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export default function RootLayout({

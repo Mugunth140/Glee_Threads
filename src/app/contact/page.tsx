@@ -1,4 +1,14 @@
+import { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Contact Us | Glee Threads',
+  description: 'Get in touch with Glee Threads for custom orders, support, or inquiries. WhatsApp or call us directly.',
+  openGraph: {
+    title: 'Contact Us | Glee Threads',
+    description: 'Get in touch with Glee Threads for custom orders, support, or inquiries. WhatsApp or call us directly.',
+  },
+};
 
 export default function ContactPage() {
   return (

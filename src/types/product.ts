@@ -64,3 +64,10 @@ export interface User {
   name: string;
   role: 'user' | 'admin';
 }
+
+export interface HeroProduct {
+  id: number;
+  product_id: number;
+  position: number;
+  product: Product;
+}

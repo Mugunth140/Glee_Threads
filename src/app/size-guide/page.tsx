@@ -1,10 +1,21 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Size Guide | Glee Threads',
+  description: 'Find your perfect fit with our detailed size guide. Measurements for chest, length, and sleeve to ensure you order the right size.',
+  openGraph: {
+    title: 'Size Guide | Glee Threads',
+    description: 'Find your perfect fit with our detailed size guide. Measurements for chest, length, and sleeve to ensure you order the right size.',
+  },
+};
+
 export default function SizeGuidePage() {
   const sizes = [
-    { label: 'S', chest: "34-36" , length: '27' , sleeve: '8.5' },
-    { label: 'M', chest: "38-40" , length: '28' , sleeve: '9' },
-    { label: 'L', chest: "42-44" , length: '29' , sleeve: '9.5' },
-    { label: 'XL', chest: "46-48" , length: '30' , sleeve: '10' },
-    { label: 'XXL', chest: "50-52" , length: '31' , sleeve: '10.5' },
+    { label: 'S', chest: "34-36", length: '27', sleeve: '8.5' },
+    { label: 'M', chest: "38-40", length: '28', sleeve: '9' },
+    { label: 'L', chest: "42-44", length: '29', sleeve: '9.5' },
+    { label: 'XL', chest: "46-48", length: '30', sleeve: '10' },
+    { label: 'XXL', chest: "50-52", length: '31', sleeve: '10.5' },
   ];
 
   return (

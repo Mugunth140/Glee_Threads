@@ -1,7 +1,15 @@
-'use client';
-
+import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'About Us | Glee Threads',
+  description: 'Learn about Glee Threads, our story, values, and commitment to premium quality custom t-shirts in Coimbatore.',
+  openGraph: {
+    title: 'About Us | Glee Threads',
+    description: 'Learn about Glee Threads, our story, values, and commitment to premium quality custom t-shirts in Coimbatore.',
+  },
+};
 
 export default function AboutPage() {
   const stats = [
@@ -49,8 +57,6 @@ export default function AboutPage() {
       description: 'Your satisfaction is our priority. We provide exceptional support at every step of your journey.',
     },
   ];
-
-
 
   return (
     <div className="min-h-screen bg-white">
@@ -202,38 +208,6 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-
-      {/* Team Section
-      <section className="py-20">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="inline-block px-4 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-600 mb-6">
-              Meet The Team
-            </span>
-            <h2 className="text-4xl font-bold text-black mb-4">The People Behind Glee Threads</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              A passionate team dedicated to bringing your t-shirt dreams to life.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {team.map((member, index) => (
-              <div key={index} className="group text-center">
-                <div className="relative aspect-square rounded-2xl overflow-hidden mb-4 bg-gray-100">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                </div>
-                <h3 className="text-lg font-semibold text-black">{member.name}</h3>
-                <p className="text-sm text-gray-500">{member.role}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 bg-black text-white">
