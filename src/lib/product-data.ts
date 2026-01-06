@@ -111,10 +111,10 @@ export async function getProductById(productId: string): Promise<Product | null>
         let colors: string[] = [];
         try {
             const [colorRows] = await pool.execute(
-                `SELECT color_hex FROM product_colors WHERE product_id = ?`,
+                `SELECT color FROM product_colors WHERE product_id = ?`,
                 [productId]
             );
-            colors = Array.isArray(colorRows) ? (colorRows as { color_hex: string }[]).map(r => r.color_hex) : [];
+            colors = Array.isArray(colorRows) ? (colorRows as { color: string }[]).map(r => r.color) : [];
         } catch (err: unknown) {
             if (typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'ER_NO_SUCH_TABLE') {
                 console.warn('product_colors table missing; skipping color lookup');
