@@ -11,36 +11,9 @@ export async function GET(request: NextRequest) {
     const style = searchParams.get('style');
     const sort = searchParams.get('sort');
 
-    let query = `
-      SELECT 
-        p.id, p.name, p.description, p.price, p.image_url, 
-        p.material, p.care_instructions, p.sizes, p.is_out_of_stock,
-        c.id as category_id, c.name as category_name
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE 1=1
-    `;
-
-    const params: string[] = [];
-
-    if (category) {
-      query += ' AND c.slug = ?';
-      params.push(category);
-    }
-
-    if (style) {
-      query += ' AND c.name LIKE ?';
-      params.push(`${style}%`);
-    }
-
-    if (search) {
-      query += ' AND (p.name LIKE ? OR p.description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
     // Pagination
     const page = Number(searchParams.get('page') || '1') || 1;
-    const pageSize = Number(searchParams.get('pageSize') || '1000') || 1000; // default to large if not provided
+    const pageSize = Number(searchParams.get('pageSize') || '1000') || 1000;
 
     // Sort
     let orderBy = 'p.created_at DESC';
@@ -51,119 +24,113 @@ export async function GET(request: NextRequest) {
     } else if (sort === 'newest') {
       orderBy = 'p.created_at DESC';
     } else if (sort === 'popular') {
-      // Assuming no popularity field, use created_at
       orderBy = 'p.created_at DESC';
     }
 
-    // Build count query (same filters)
-    const countQuery = `SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1` +
-      (category ? ' AND c.slug = ?' : '') +
-      (style ? ' AND c.name LIKE ?' : '') +
-      (search ? ' AND (p.name LIKE ? OR p.description LIKE ?)' : '');
+    // Build WHERE clause
+    let whereClause = 'WHERE 1=1';
+    const params: (string | number)[] = [];
 
-    const [countRows] = await pool.execute<RowDataPacket[]>(countQuery, params);
-    const totalRow = (Array.isArray(countRows) && countRows[0]) ? (countRows[0] as RowDataPacket & { total?: number }) : undefined;
-    const total = totalRow && typeof totalRow.total === 'number' ? Number(totalRow.total) : 0;
+    if (category) {
+      whereClause += ' AND c.slug = ?';
+      params.push(category);
+    }
 
-    // Some installations may not have `p.sizes` column yet. Try the full query first
-    // and fall back to a safer query if it fails.
+    if (style) {
+      whereClause += ' AND c.name LIKE ?';
+      params.push(`${style}%`);
+    }
+
+    if (search) {
+      whereClause += ' AND (p.name LIKE ? OR p.description LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Count total
+    let total = 0;
+    try {
+      const countQuery = `SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id ${whereClause}`;
+      const [countRows] = await pool.query<RowDataPacket[]>(countQuery, params);
+      total = (countRows[0] as { total: number })?.total || 0;
+    } catch (e) {
+      console.warn('Count query failed:', (e as Error).message);
+    }
+
+    const offset = (page - 1) * pageSize;
     let productsRows: RowDataPacket[] = [];
 
-    // Append order and pagination to query
-    query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
-    const dataParams = [...params, pageSize, (page - 1) * pageSize];
-
+    // Try with all columns first, fallback to minimal columns
     try {
-      const [rows] = await pool.execute<RowDataPacket[]>(query, dataParams);
-      productsRows = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
-    } catch (e) {
-      console.warn('Products list query failed, retrying with minimal columns:', (e as Error).message);
-      // Fallback to minimal query without optional columns
-      const fallbackQuery = `
-        SELECT p.id, p.name, p.description, p.price, p.image_url, 
-               c.id as category_id, c.name as category_name
+      const query = `
+        SELECT 
+          p.id, p.name, p.description, p.price, p.image_url,
+          p.sizes, p.is_out_of_stock,
+          c.id as category_id, c.name as category_name, c.slug as category_slug
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
-        WHERE 1=1
-        ${category ? ' AND c.slug = ?' : ''}
-        ${style ? ' AND c.name LIKE ?' : ''}
-        ${search ? ' AND (p.name LIKE ? OR p.description LIKE ?)' : ''}
-        ORDER BY ${orderBy} LIMIT ? OFFSET ?
+        ${whereClause}
+        ORDER BY ${orderBy}
+        LIMIT ? OFFSET ?
       `;
-      const [rows] = await pool.execute<RowDataPacket[]>(fallbackQuery, dataParams);
-      productsRows = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
-    }
+      const [rows] = await pool.query<RowDataPacket[]>(query, [...params, pageSize, offset]);
+      productsRows = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      console.warn('Full products query failed, trying minimal:', (e as Error).message);
 
-    // Fetch inventory sizes for all returned products so we can fallback to inventory
-    const productIds = (productsRows as Array<{ id: number }>).map(p => p.id);
-    let inventoryMap: Record<number, { size_name: string; size_id?: number; quantity?: number; sku?: string }[]> = {};
-    if (productIds.length > 0) {
+      // Fallback: minimal columns that should always exist
       try {
-        const placeholders = productIds.map(() => '?').join(',');
-        const [invRows] = await pool.execute<RowDataPacket[]>(
-          `SELECT pi.product_id, s.id as size_id, s.name as size_name, pi.quantity, pi.sku
-           FROM product_inventory pi
-           JOIN sizes s ON pi.size_id = s.id
-           WHERE pi.product_id IN (${placeholders})`,
-          productIds
-        );
-        for (const r of invRows as RowDataPacket[]) {
-          const row = r as RowDataPacket & { product_id: number; size_id: number; size_name: string; quantity: number; sku: string };
-          const pid = Number(row.product_id);
-          inventoryMap[pid] = inventoryMap[pid] || [];
-          inventoryMap[pid].push({ size_name: String(row.size_name), size_id: Number(row.size_id), quantity: Number(row.quantity), sku: row.sku });
-        }
-      } catch (err) {
-        // If inventory or sizes table missing, ignore and continue
-        console.warn('Could not fetch product inventory for sizes fallback:', err);
-        inventoryMap = {};
+        const fallbackQuery = `
+          SELECT 
+            p.id, p.name, p.description, p.price, p.image_url,
+            c.id as category_id, c.name as category_name, c.slug as category_slug
+          FROM products p
+          LEFT JOIN categories c ON p.category_id = c.id
+          ${whereClause}
+          ORDER BY ${orderBy}
+          LIMIT ? OFFSET ?
+        `;
+        const [rows] = await pool.query<RowDataPacket[]>(fallbackQuery, [...params, pageSize, offset]);
+        productsRows = Array.isArray(rows) ? rows : [];
+      } catch (e2) {
+        console.error('Fallback query also failed:', (e2 as Error).message);
+        productsRows = [];
       }
     }
 
-    // Add sizes (available if not out of stock). Prefer sizes stored on product row, fallback to inventory table.
-    const productsWithSizes = (productsRows as Array<{
-      id: number;
-      name: string;
-      description: string;
-      price: number;
-      image_url: string;
-      category_id: number;
-      category_name: string;
-      is_out_of_stock: boolean;
-      sizes?: unknown;
-    }>).map(product => {
-      let sizes: { size_name: string; size_id?: number; quantity?: number; sku?: string }[] = [];
-      if (!product.is_out_of_stock) {
-        try {
-          const raw = (product as unknown as { sizes?: unknown }).sizes;
-          const arr = raw ? (typeof raw === 'string' ? JSON.parse(String(raw)) : raw) : [];
-          sizes = Array.isArray(arr) ? (arr as string[]).map((name: string) => ({ size_name: String(name), quantity: 0, sku: '' })) : [];
-          // If no sizes in product row, fallback to inventory-derived sizes
-          if (sizes.length === 0 && inventoryMap[product.id]) {
-            sizes = inventoryMap[product.id];
-          }
-        } catch (e) {
-          // Parsing failed; log a concise warning so we can detect intermittent parsing errors.
-          console.warn(`Failed to parse sizes for product ${product.id}:`, (e as Error).message || e);
-          sizes = [];
-        }
+    // Process products with sizes
+    const products = productsRows.map(product => {
+      let sizes: { size_name: string }[] = [];
 
-        // If after parsing and inventory fallback we still have no sizes, log a trace so admin can investigate
-        if (sizes.length === 0) {
-          console.debug(`Product ${product.id} has no sizes in product row or inventory`);
+      // Parse sizes from product row if available
+      try {
+        const raw = (product as { sizes?: unknown }).sizes;
+        if (raw) {
+          const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (Array.isArray(arr)) {
+            sizes = arr.map((name: string) => ({ size_name: String(name) }));
+          }
         }
+      } catch {
+        sizes = [];
       }
+
       return {
-        ...product,
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        image_url: product.image_url,
+        category_id: product.category_id,
+        category_name: product.category_name,
+        category_slug: product.category_slug,
+        is_out_of_stock: !!product.is_out_of_stock,
         sizes,
       };
     });
 
-    // Return pagination info along with products
-    return NextResponse.json({ products: productsWithSizes, total, page, pageSize });
+    return NextResponse.json({ products, total, page, pageSize });
   } catch (error) {
     console.error('Error fetching products:', error);
-    // Return empty data instead of error object to prevent frontend crashes
     return NextResponse.json({ products: [], total: 0, page: 1, pageSize: 1000 });
   }
 }
