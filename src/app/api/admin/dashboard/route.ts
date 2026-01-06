@@ -89,29 +89,33 @@ export async function GET(request: Request) {
     let monthlyStats: { month: string; orders: number; revenue: number }[] = [];
     
     try {
-      // Total Orders (All valid orders)
+      // Total Orders (All orders regardless of status)
       const [orderCount] = await pool.execute<CountRow[]>(
-        'SELECT COUNT(*) as count FROM orders WHERE status != "cancelled"'
+        'SELECT COUNT(*) as count FROM orders'
       );
       totalOrders = orderCount[0]?.count || 0;
+      console.log('Dashboard - Total orders:', totalOrders);
 
       // Pending Orders (status based)
       const [pendingCount] = await pool.execute<CountRow[]>(
-        'SELECT COUNT(*) as count FROM orders WHERE status = "pending"'
+        "SELECT COUNT(*) as count FROM orders WHERE status = 'pending'"
       );
       pendingOrders = pendingCount[0]?.count || 0;
+      console.log('Dashboard - Pending orders:', pendingOrders);
 
       // Paid Orders Count (requested for "Total Customers" metric) - status based
       const [paidCount] = await pool.execute<CountRow[]>(
-        'SELECT COUNT(*) as count FROM orders WHERE status = "paid"'
+        "SELECT COUNT(*) as count FROM orders WHERE status = 'paid'"
       );
       paidOrdersCount = paidCount[0]?.count || 0;
+      console.log('Dashboard - Paid orders:', paidOrdersCount);
 
       // Total Revenue (only paid orders)
       const [revenueSum] = await pool.execute<SumRow[]>(
-        'SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status = "paid"'
+        "SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status = 'paid'"
       );
       totalRevenue = Number(revenueSum[0]?.total || 0);
+      console.log('Dashboard - Total revenue:', totalRevenue);
 
       // Monthly Stats (Last 6 months)
       const [statsRows] = await pool.execute<MonthlyStatRow[]>(`
@@ -120,7 +124,7 @@ export async function GET(request: Request) {
             COUNT(*) as orders,
             SUM(total_amount) as revenue
         FROM orders
-        WHERE status = "paid"
+        WHERE status = 'paid'
         AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
         GROUP BY DATE_FORMAT(created_at, '%Y-%m'), month
         ORDER BY created_at ASC

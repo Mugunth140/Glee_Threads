@@ -1,3 +1,4 @@
+import { del } from '@vercel/blob';
 import pool from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -185,6 +186,20 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    // First, get the product's image URL so we can delete it from blob storage
+    let imageUrl: string | null = null;
+    try {
+      const [products] = await pool.query<RowDataPacket[]>(
+        'SELECT image_url FROM products WHERE id = ?',
+        [id]
+      );
+      if (products.length > 0 && products[0].image_url) {
+        imageUrl = products[0].image_url as string;
+      }
+    } catch (e) {
+      console.warn('Could not fetch product image URL:', (e as Error).message);
+    }
+
     // Delete from featured products first (ignore if table doesn't exist)
     try {
       await pool.query('DELETE FROM featured_products WHERE product_id = ?', [id]);
@@ -214,6 +229,17 @@ export async function DELETE(
 
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    // Delete image from Vercel Blob storage if it exists
+    if (imageUrl && imageUrl.includes('blob.vercel-storage.com')) {
+      try {
+        await del(imageUrl);
+        console.log('Deleted image from blob storage:', imageUrl);
+      } catch (e) {
+        console.warn('Could not delete image from blob storage:', (e as Error).message);
+        // Don't fail the request if blob deletion fails
+      }
     }
 
     return NextResponse.json({ message: 'Product deleted successfully' });
