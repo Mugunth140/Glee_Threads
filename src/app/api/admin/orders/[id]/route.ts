@@ -49,14 +49,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Status is required' }, { status: 400 });
     }
 
-    const validStatuses = ['pending', 'paid', 'cancelled'];
+    const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status.toLowerCase())) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      return NextResponse.json({ error: `Invalid status. Valid values: ${validStatuses.join(', ')}` }, { status: 400 });
     }
 
     const [result] = await pool.query<ResultSetHeader>(
       'UPDATE orders SET status = ? WHERE id = ?',
-      [status, id]
+      [status.toLowerCase(), id]
     );
 
     if (result.affectedRows === 0) {
