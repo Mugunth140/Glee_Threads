@@ -82,12 +82,12 @@ export async function GET(
     let colors: string[] = [];
     try {
       const [rows] = await pool.query<RowDataPacket[]>(
-        'SELECT color_hex FROM product_colors WHERE product_id = ?',
+        'SELECT color FROM product_colors WHERE product_id = ?',
         [id]
       );
       if (Array.isArray(rows)) {
-        const typed = rows as Array<RowDataPacket & { color_hex: string }>;
-        colors = typed.map(r => String(r.color_hex));
+        const typed = rows as Array<RowDataPacket & { color: string }>;
+        colors = typed.map(r => String(r.color));
       } else {
         colors = [];
       }
@@ -96,7 +96,7 @@ export async function GET(
       colors = [];
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       product: products[0],
       sizes: sizesArr,
       colors
@@ -139,19 +139,11 @@ export async function PUT(
     // Update colors: recreate product_colors entries
     if (Array.isArray(colors)) {
       try {
-        await pool.query(
-          `CREATE TABLE IF NOT EXISTS product_colors (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            product_id INT NOT NULL,
-            color_hex VARCHAR(12) NOT NULL,
-            CONSTRAINT fk_pc_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
-        );
         await pool.query('DELETE FROM product_colors WHERE product_id = ?', [id]);
         for (const color of colors) {
-          const hex = String(color).trim();
-          if (!hex) continue;
-          await pool.query('INSERT INTO product_colors (product_id, color_hex) VALUES (?, ?)', [id, hex]);
+          const colorValue = String(color).trim();
+          if (!colorValue) continue;
+          await pool.query('INSERT INTO product_colors (product_id, color) VALUES (?, ?)', [id, colorValue]);
         }
       } catch (e) {
         console.error('Failed to save product colors', e);
@@ -193,14 +185,27 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    // Delete from featured products first
-    await pool.query('DELETE FROM featured_products WHERE product_id = ?', [id]);
-    
-    // Delete inventory
-    await pool.query('DELETE FROM product_inventory WHERE product_id = ?', [id]);
-    
-    // Cart items are stored client-side (anonymous cart). No DB cleanup needed here.
-    
+    // Delete from featured products first (ignore if table doesn't exist)
+    try {
+      await pool.query('DELETE FROM featured_products WHERE product_id = ?', [id]);
+    } catch (e) {
+      console.warn('Could not delete from featured_products:', (e as Error).message);
+    }
+
+    // Delete from hero products (ignore if table doesn't exist)
+    try {
+      await pool.query('DELETE FROM hero_products WHERE product_id = ?', [id]);
+    } catch (e) {
+      console.warn('Could not delete from hero_products:', (e as Error).message);
+    }
+
+    // Delete product colors (ignore if table doesn't exist)
+    try {
+      await pool.query('DELETE FROM product_colors WHERE product_id = ?', [id]);
+    } catch (e) {
+      console.warn('Could not delete from product_colors:', (e as Error).message);
+    }
+
     // Delete product
     const [result] = await pool.query<ResultSetHeader>(
       'DELETE FROM products WHERE id = ?',

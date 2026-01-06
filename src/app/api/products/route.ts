@@ -14,11 +14,11 @@ export async function GET(request: NextRequest) {
     let query = `
       SELECT 
         p.id, p.name, p.description, p.price, p.image_url, 
-        p.material, p.care_instructions, p.sizes, p.is_active, p.is_out_of_stock,
+        p.material, p.care_instructions, p.sizes, p.is_out_of_stock,
         c.id as category_id, c.name as category_name
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
-      WHERE p.is_active = true
+      WHERE 1=1
     `;
 
     const params: string[] = [];
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build count query (same filters)
-    const countQuery = `SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = true` +
+    const countQuery = `SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1` +
       (category ? ' AND c.slug = ?' : '') +
       (style ? ' AND c.name LIKE ?' : '') +
       (search ? ' AND (p.name LIKE ? OR p.description LIKE ?)' : '');
@@ -77,9 +77,19 @@ export async function GET(request: NextRequest) {
       const [rows] = await pool.execute<RowDataPacket[]>(query, dataParams);
       productsRows = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
     } catch (e) {
-      console.warn('Products list query failed, retrying without sizes column:', (e as Error).message);
-      // remove p.sizes from select (rebuild query to be safe)
-      const fallbackQuery = query.replace('p.material, p.care_instructions, p.sizes, p.is_active, p.is_out_of_stock,', 'p.material, p.care_instructions, p.is_active, p.is_out_of_stock,');
+      console.warn('Products list query failed, retrying with minimal columns:', (e as Error).message);
+      // Fallback to minimal query without optional columns
+      const fallbackQuery = `
+        SELECT p.id, p.name, p.description, p.price, p.image_url, 
+               c.id as category_id, c.name as category_name
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE 1=1
+        ${category ? ' AND c.slug = ?' : ''}
+        ${style ? ' AND c.name LIKE ?' : ''}
+        ${search ? ' AND (p.name LIKE ? OR p.description LIKE ?)' : ''}
+        ORDER BY ${orderBy} LIMIT ? OFFSET ?
+      `;
       const [rows] = await pool.execute<RowDataPacket[]>(fallbackQuery, dataParams);
       productsRows = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
     }

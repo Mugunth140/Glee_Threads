@@ -10,31 +10,30 @@ export async function GET(
   try {
     const { id: productId } = await params;
 
-    // Get product details. `sizes` column may not exist on older DBs, so try including it first
+    // Get product details. Some columns may not exist on older DBs, so try full query first
     let products: RowDataPacket[] = [];
     try {
       const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT 
           p.id, p.name, p.description, p.price, p.image_url, 
-          p.material, p.care_instructions, p.sizes, p.is_active, p.is_out_of_stock,
+          p.material, p.care_instructions, p.sizes, p.is_out_of_stock,
           c.id as category_id, c.name as category_name
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
-        WHERE p.id = ? AND p.is_active = true`,
+        WHERE p.id = ?`,
         [productId]
       );
       products = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
     } catch (e) {
-      // Fallback: query without `sizes` column in case the column doesn't exist
-      console.warn('Product detail query with sizes failed, retrying without sizes column:', (e as Error).message);
+      // Fallback: query without optional columns
+      console.warn('Product detail query failed, retrying with minimal columns:', (e as Error).message);
       const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT 
           p.id, p.name, p.description, p.price, p.image_url, 
-          p.material, p.care_instructions, p.is_active, p.is_out_of_stock,
           c.id as category_id, c.name as category_name
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
-        WHERE p.id = ? AND p.is_active = true`,
+        WHERE p.id = ?`,
         [productId]
       );
       products = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
@@ -75,9 +74,9 @@ export async function GET(
         );
         sizesWithNames = Array.isArray(sizeRows)
           ? (sizeRows as RowDataPacket[]).map(r => {
-              const row = r as RowDataPacket & { id: number; size: string; stock: number };
-              return { size_name: String(row.size), size_id: Number(row.id), quantity: Number(row.stock), sku: '' };
-            })
+            const row = r as RowDataPacket & { id: number; size: string; stock: number };
+            return { size_name: String(row.size), size_id: Number(row.id), quantity: Number(row.stock), sku: '' };
+          })
           : [];
 
         // If we found sizes in the product_sizes table, persist them back to products.sizes
@@ -118,10 +117,10 @@ export async function GET(
     let colors: string[] = [];
     try {
       const [colorRows] = await pool.execute(
-        `SELECT color_hex FROM product_colors WHERE product_id = ?`,
+        `SELECT color FROM product_colors WHERE product_id = ?`,
         [productId]
       );
-      colors = Array.isArray(colorRows) ? (colorRows as { color_hex: string }[]).map(r => r.color_hex) : [];
+      colors = Array.isArray(colorRows) ? (colorRows as { color: string }[]).map(r => r.color) : [];
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'ER_NO_SUCH_TABLE') {
         console.warn('product_colors table missing; skipping color lookup');
