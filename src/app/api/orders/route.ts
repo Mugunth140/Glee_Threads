@@ -1,5 +1,5 @@
 import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Ensure orders table has required columns (runs once per cold start)
@@ -7,21 +7,31 @@ let ordersTableChecked = false;
 async function ensureOrdersColumns() {
   if (ordersTableChecked) return;
   try {
-    // Add missing columns if they don't exist
-    const alterQueries = [
-      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_name VARCHAR(255)",
-      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_email VARCHAR(255)",
-      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone VARCHAR(32)",
-      "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50)",
+    // Check which columns exist
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'`
+    );
+    const existingColumns = new Set((rows as RowDataPacket[]).map(r => r.COLUMN_NAME as string));
+    
+    // Add missing columns
+    const columnsToAdd: [string, string][] = [
+      ['user_name', 'VARCHAR(255)'],
+      ['user_email', 'VARCHAR(255)'],
+      ['phone', 'VARCHAR(32)'],
+      ['payment_method', 'VARCHAR(50)'],
     ];
-    for (const q of alterQueries) {
-      try {
-        await pool.query(q);
-      } catch (e: unknown) {
-        // Ignore if column already exists or syntax not supported
-        const code = typeof e === 'object' && e !== null && 'code' in e ? (e as { code?: string }).code : '';
-        if (code !== 'ER_DUP_FIELDNAME') {
-          console.warn('Alter orders table warning:', (e as Error).message);
+    
+    for (const [colName, colType] of columnsToAdd) {
+      if (!existingColumns.has(colName)) {
+        try {
+          await pool.query(`ALTER TABLE orders ADD COLUMN ${colName} ${colType}`);
+          console.info(`Added column ${colName} to orders table`);
+        } catch (e: unknown) {
+          const code = typeof e === 'object' && e !== null && 'code' in e ? (e as { code?: string }).code : '';
+          if (code !== 'ER_DUP_FIELDNAME') {
+            console.warn(`Failed to add column ${colName}:`, (e as Error).message);
+          }
         }
       }
     }
