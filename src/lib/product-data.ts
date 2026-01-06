@@ -10,11 +10,11 @@ export async function getProductById(productId: string): Promise<Product | null>
             const [rows] = await pool.execute<RowDataPacket[]>(
                 `SELECT 
           p.id, p.name, p.description, p.price, p.image_url, 
-          p.material, p.care_instructions, p.sizes, p.is_active, p.is_out_of_stock,
+          p.material, p.care_instructions, p.sizes, p.is_out_of_stock,
           c.id as category_id, c.name as category_name
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
-        WHERE p.id = ? AND p.is_active = true`,
+        WHERE p.id = ?`,
                 [productId]
             );
             products = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
@@ -24,11 +24,11 @@ export async function getProductById(productId: string): Promise<Product | null>
             const [rows] = await pool.execute<RowDataPacket[]>(
                 `SELECT 
           p.id, p.name, p.description, p.price, p.image_url, 
-          p.material, p.care_instructions, p.is_active, p.is_out_of_stock,
+          p.material, p.care_instructions, p.is_out_of_stock,
           c.id as category_id, c.name as category_name
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
-        WHERE p.id = ? AND p.is_active = true`,
+        WHERE p.id = ?`,
                 [productId]
             );
             products = Array.isArray(rows) ? (rows as RowDataPacket[]) : [];
@@ -135,7 +135,6 @@ export async function getProductById(productId: string): Promise<Product | null>
             category_name: product.category_name,
             material: product.material,
             care_instructions: product.care_instructions,
-            is_active: !!product.is_active,
             is_out_of_stock: !!product.is_out_of_stock,
             sizes: sizesWithNames.map(s => ({
                 size_id: s.size_id || 0,

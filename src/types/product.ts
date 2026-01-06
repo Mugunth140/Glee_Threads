@@ -9,7 +9,7 @@ export interface Product {
   material?: string;
   care_instructions?: string;
   is_visible?: boolean;
-  is_active: boolean;
+  is_active?: boolean;
   is_out_of_stock?: boolean;
   created_at?: string;
   sizes?: ProductSize[];
