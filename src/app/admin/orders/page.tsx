@@ -108,12 +108,6 @@ export default function AdminOrdersPage() {
         return 'bg-yellow-500/20 text-yellow-400';
       case 'paid':
         return 'bg-green-500/20 text-green-400';
-      case 'processing':
-        return 'bg-blue-500/20 text-blue-400';
-      case 'shipped':
-        return 'bg-purple-500/20 text-purple-400';
-      case 'delivered':
-        return 'bg-emerald-500/20 text-emerald-400';
       case 'cancelled':
         return 'bg-red-500/20 text-red-400';
       default:
@@ -154,9 +148,6 @@ export default function AdminOrdersPage() {
           <option value="all">All Orders</option>
           <option value="pending">Pending</option>
           <option value="paid">Paid</option>
-          <option value="processing">Processing</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
@@ -327,9 +318,6 @@ export default function AdminOrdersPage() {
                 >
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>

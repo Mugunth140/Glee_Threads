@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS orders (
   user_name VARCHAR(255),
   user_email VARCHAR(255),
   phone VARCHAR(32),
-  status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+  status VARCHAR(50) DEFAULT 'pending',
   total_amount DECIMAL(10, 2) NOT NULL,
   coupon_code VARCHAR(50) NULL,
   coupon_discount_percent INT NULL,

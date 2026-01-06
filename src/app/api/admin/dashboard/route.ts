@@ -97,19 +97,19 @@ export async function GET(request: Request) {
 
       // Pending Orders (status based)
       const [pendingCount] = await pool.execute<CountRow[]>(
-        'SELECT COUNT(*) as count FROM orders WHERE status IN ("pending", "processing")'
+        'SELECT COUNT(*) as count FROM orders WHERE status = "pending"'
       );
       pendingOrders = pendingCount[0]?.count || 0;
 
       // Paid Orders Count (requested for "Total Customers" metric) - status based
       const [paidCount] = await pool.execute<CountRow[]>(
-        'SELECT COUNT(*) as count FROM orders WHERE status IN ("paid", "shipped", "delivered")'
+        'SELECT COUNT(*) as count FROM orders WHERE status = "paid"'
       );
       paidOrdersCount = paidCount[0]?.count || 0;
 
-      // Total Revenue (only paid/completed orders)
+      // Total Revenue (only paid orders)
       const [revenueSum] = await pool.execute<SumRow[]>(
-        'SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status IN ("paid", "shipped", "delivered")'
+        'SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status = "paid"'
       );
       totalRevenue = Number(revenueSum[0]?.total || 0);
 
@@ -120,7 +120,7 @@ export async function GET(request: Request) {
             COUNT(*) as orders,
             SUM(total_amount) as revenue
         FROM orders
-        WHERE status IN ("paid", "shipped", "delivered")
+        WHERE status = "paid"
         AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
         GROUP BY DATE_FORMAT(created_at, '%Y-%m'), month
         ORDER BY created_at ASC
