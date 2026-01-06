@@ -138,21 +138,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Store colors if provided. Create product_colors table if missing.
+    // Store colors if provided
     if (colors && Array.isArray(colors) && colors.length > 0) {
-      await pool.query(
-        `CREATE TABLE IF NOT EXISTS product_colors (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          product_id INT NOT NULL,
-          color_hex VARCHAR(12) NOT NULL,
-          CONSTRAINT fk_pc_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
-      );
-
-      for (const color of colors) {
-        const hex = String(color).trim();
-        if (!hex) continue;
-        await pool.query('INSERT INTO product_colors (product_id, color_hex) VALUES (?, ?)', [productId, hex]);
+      try {
+        for (const color of colors) {
+          const colorValue = String(color).trim();
+          if (!colorValue) continue;
+          // Use existing product_colors table with 'color' column
+          await pool.query('INSERT INTO product_colors (product_id, color) VALUES (?, ?)', [productId, colorValue]);
+        }
+      } catch (colorError) {
+        console.warn('Failed to insert product colors:', (colorError as Error).message);
+        // Non-fatal error - continue with product creation
       }
     }
 
