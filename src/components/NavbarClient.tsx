@@ -1,7 +1,8 @@
 'use client';
 
+import AnimatedLogo from './AnimatedLogo';
+
 // import { useAuth } from '@/contexts/AuthContext';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -79,7 +80,7 @@ export default function NavbarClient() {
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
             {/* Mobile Menu Button */}
-            <button 
+            <button
               className="lg:hidden p-2 -ml-2 text-black"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -109,16 +110,7 @@ export default function NavbarClient() {
             </div>
 
             {/* Center - Logo */}
-            <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center gap-0.5 group">
-              <Image 
-                src="/glee_logo.png" 
-                alt="Glee Logo" 
-                width={24} 
-                height={24}
-                className="object-contain"
-              />
-              <span className="text-2xl md:text-3xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
-            </Link>
+            <AnimatedLogo className="absolute left-1/2 transform -translate-x-1/2" />
 
             {/* Right - Cart & Checkout */}
             <div className="flex items-center gap-2 md:gap-4">
@@ -148,7 +140,7 @@ export default function NavbarClient() {
 
       {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
         />
@@ -158,16 +150,10 @@ export default function NavbarClient() {
       <div className={`fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 lg:hidden transform transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-0.5" onClick={() => setMobileMenuOpen(false)}>
-              <Image 
-                src="/glee_logo.png" 
-                alt="Glee Logo" 
-                width={20} 
-                height={20}
-                className="object-contain"
-              />
-              <span className="text-xl font-extrabold text-black" style={{ fontFamily: 'var(--font-figtree)' }}>lee Threads</span>
-            </Link>
+            <AnimatedLogo
+              isMobile
+              onClick={() => setMobileMenuOpen(false)}
+            />
             <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-500">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -305,7 +291,7 @@ export default function NavbarClient() {
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   className="w-full pl-10 pr-12 py-2 text-base md:text-sm text-black border border-black/15 rounded-lg focus:ring-2 focus:ring-primary focus:bg-white transition-all"
                 />
-                <button 
+                <button
                   onClick={handleSearch}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors"
                 >
@@ -314,7 +300,7 @@ export default function NavbarClient() {
                   </svg>
                 </button>
                 {searchQuery && (
-                  <button 
+                  <button
                     onClick={() => setSearchQuery('')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors"
                   >
@@ -361,7 +347,7 @@ export default function NavbarClient() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="w-full pl-10 pr-10 py-2 text-base text-black bg-gray-50 border-transparent rounded-lg focus:bg-white focus:ring-2 focus:ring-primary transition-all"
               />
-              <button 
+              <button
                 onClick={handleSearch}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               >
@@ -370,7 +356,7 @@ export default function NavbarClient() {
                 </svg>
               </button>
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                 >
