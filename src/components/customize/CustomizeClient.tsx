@@ -22,51 +22,55 @@ const COLORS = [
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
-const FONTS = [
-  { name: 'Modern', class: 'font-sans' },
-  { name: 'Classic', class: 'font-serif' },
-  { name: 'Mono', class: 'font-mono' },
-  { name: 'Bold', class: 'font-extrabold' },
-];
-
 export default function CustomizeClient() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedSize, setSelectedSize] = useState('M');
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null); // The final URL for the cart
-  const [previewImage, setPreviewImage] = useState<string | null>(null); // The local preview
-  const [customText, setCustomText] = useState('');
-  const [textColor, setTextColor] = useState('#000000');
-  const [selectedFont, setSelectedFont] = useState(FONTS[0]);
-  const [isUploading, setIsUploading] = useState(false);
+
+  // Front Image State
+  const [frontImageUrl, setFrontImageUrl] = useState<string | null>(null);
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
+  const [isUploadingFront, setIsUploadingFront] = useState(false);
+
+  // Back Image State
+  const [backImageUrl, setBackImageUrl] = useState<string | null>(null);
+  const [backPreview, setBackPreview] = useState<string | null>(null);
+  const [isUploadingBack, setIsUploadingBack] = useState(false);
+
+  // Instructions State
+  const [instructions, setInstructions] = useState('');
+
+  // Preview View State (front or back)
+  const [viewSide, setViewSide] = useState<'front' | 'back'>('front');
+
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // Image Adjustment State
-  const [imgScale, setImgScale] = useState(1);
-  const [imgPos, setImgPos] = useState({ x: 0, y: 0 });
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleImageUpload = async (
+    file: File,
+    side: 'front' | 'back'
+  ) => {
     if (file.type !== 'image/png') {
       showToast('Only PNG images are allowed', { type: 'error' });
       return;
     }
 
-    // Immediate local preview
     const objectUrl = URL.createObjectURL(file);
-    setPreviewImage(objectUrl);
-    setUploadedImage(null); // Reset previous upload
-    setImgScale(1); // Reset adjustments
-    setImgPos({ x: 0, y: 0 });
-    setIsUploading(true);
+
+    if (side === 'front') {
+      setFrontPreview(objectUrl);
+      setFrontImageUrl(null);
+      setIsUploadingFront(true);
+    } else {
+      setBackPreview(objectUrl);
+      setBackImageUrl(null);
+      setIsUploadingBack(true);
+    }
 
     try {
       let fileToUpload = file;
 
-      // Compress if larger than 2.5MB
       if (file.size > 2.5 * 1024 * 1024) {
         showToast('Compressing image...', { type: 'info' });
         try {
@@ -86,55 +90,68 @@ export default function CustomizeClient() {
       }
 
       const blob = await response.json();
-      setUploadedImage(blob.url);
-      showToast('Image uploaded successfully', { type: 'success' });
+
+      if (side === 'front') {
+        setFrontImageUrl(blob.url);
+      } else {
+        setBackImageUrl(blob.url);
+      }
+      showToast(`${side === 'front' ? 'Front' : 'Back'} image uploaded successfully`, { type: 'success' });
     } catch (error) {
       console.error('Upload error:', error);
       showToast('Failed to upload image. Please try again.', { type: 'error' });
-      setPreviewImage(null); // Clear preview on failure
+      if (side === 'front') {
+        setFrontPreview(null);
+      } else {
+        setBackPreview(null);
+      }
     } finally {
-      setIsUploading(false);
+      if (side === 'front') {
+        setIsUploadingFront(false);
+      } else {
+        setIsUploadingBack(false);
+      }
     }
   };
 
+  const handleFrontFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file, 'front');
+  };
+
+  const handleBackFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file, 'back');
+  };
+
   const handleAddToCart = () => {
-    if (!uploadedImage && !customText) {
-      // If we have a preview but no uploadedImage, it means upload is still in progress or failed
-      if (previewImage && !uploadedImage) {
-        showToast('Please wait for the image upload to complete', { type: 'error' });
+    if (!frontImageUrl && !backImageUrl) {
+      if ((frontPreview && !frontImageUrl) || (backPreview && !backImageUrl)) {
+        showToast('Please wait for image uploads to complete', { type: 'error' });
         return;
       }
-      showToast('Please add a design or text first', { type: 'error' });
+      showToast('Please upload at least one design image', { type: 'error' });
       return;
     }
 
     setIsAddingToCart(true);
     try {
-      // Create a draft object for the custom order
       const customDraft = {
         product: {
           id: -1,
-          name: `Custom Tee (${customText ? 'Text: ' + customText : 'Graphic Only'})`,
-          price: 1000, // Base price for custom orders
-          image_url: uploadedImage || '/glee_logo.png',
+          name: 'Custom T-Shirt Design',
+          price: 1000,
+          image_url: frontImageUrl || backImageUrl || '/glee_logo.png',
         },
         quantity: 1,
         size_name: selectedSize,
         color: selectedColor.name,
-        custom_image_url: uploadedImage,
-        custom_text: customText,
-        custom_options: {
-          scale: imgScale,
-          position: imgPos,
-          font: selectedFont.name,
-          text_color: textColor
-        }
+        front_image_url: frontImageUrl,
+        back_image_url: backImageUrl,
+        instructions: instructions,
       };
 
-      // Save to localStorage
       localStorage.setItem('glee_custom_draft', JSON.stringify(customDraft));
-
-      // Redirect to the custom checkout page
       window.location.href = '/checkout/custom';
 
     } catch (error) {
@@ -144,6 +161,9 @@ export default function CustomizeClient() {
     }
   };
 
+  const currentPreview = viewSide === 'front' ? frontPreview : backPreview;
+  const hasAnyImage = frontPreview || backPreview;
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12">
@@ -151,23 +171,42 @@ export default function CustomizeClient() {
 
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-12 items-start">
           {/* Preview Area */}
-          <div className="bg-gray-50 rounded-3xl p-6 lg:p-12 flex items-center justify-center relative min-h-[400px] lg:min-h-[600px] lg:sticky top-24 overflow-hidden mb-10 lg:mb-0 shadow-inner">
+          <div className="bg-gray-50 rounded-3xl p-6 lg:p-12 flex flex-col items-center justify-center relative min-h-[400px] lg:min-h-[600px] lg:sticky top-24 overflow-hidden mb-10 lg:mb-0 shadow-inner">
+            {/* Flip Button */}
+            {hasAnyImage && (
+              <div className="absolute top-4 right-4 z-10 flex gap-2">
+                <button
+                  onClick={() => setViewSide('front')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${viewSide === 'front'
+                      ? 'bg-black text-white'
+                      : 'bg-white text-gray-500 border border-gray-200 hover:border-black'
+                    }`}
+                >
+                  Front
+                </button>
+                <button
+                  onClick={() => setViewSide('back')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${viewSide === 'back'
+                      ? 'bg-black text-white'
+                      : 'bg-white text-gray-500 border border-gray-200 hover:border-black'
+                    }`}
+                >
+                  Back
+                </button>
+              </div>
+            )}
+
             <div className="relative w-full max-w-[300px] md:max-w-md aspect-square">
               {/* T-Shirt SVG */}
               <TShirtOutline color={selectedColor.hex} className="w-full h-full drop-shadow-2xl" />
 
               {/* Design Overlay */}
-              <div className="absolute top-[25%] left-[25%] w-[50%] h-[40%] flex flex-col items-center justify-center gap-4 pointer-events-none overflow-hidden">
-                {previewImage && (
-                  <div
-                    className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out origin-center"
-                    style={{
-                      transform: `translate(${imgPos.x}px, ${imgPos.y}px) scale(${imgScale})`
-                    }}
-                  >
+              <div className="absolute top-[25%] left-[25%] w-[50%] h-[40%] flex flex-col items-center justify-center pointer-events-none overflow-hidden">
+                {currentPreview && (
+                  <div className="w-full h-full flex items-center justify-center">
                     <Image
-                      src={previewImage}
-                      alt="Custom Design"
+                      src={currentPreview}
+                      alt={`${viewSide} Design`}
                       width={200}
                       height={200}
                       className="object-contain w-full h-full"
@@ -175,23 +214,22 @@ export default function CustomizeClient() {
                     />
                   </div>
                 )}
-                {customText && (
-                  <div
-                    className={`text-center break-words w-full px-2 ${selectedFont.class}`}
-                    style={{ color: textColor, fontSize: '1.2rem', lineHeight: '1.2' }}
-                  >
-                    {customText}
-                  </div>
-                )}
               </div>
 
               {/* Hint text if empty */}
-              {!previewImage && !customText && (
+              {!hasAnyImage && (
                 <div className="absolute top-[40%] left-1/2 -translate-x-1/2 text-gray-400 text-xs font-bold border-2 border-dashed border-gray-300 rounded-xl p-4 whitespace-nowrap bg-white/50 backdrop-blur-sm">
                   YOUR DESIGN HERE
                 </div>
               )}
             </div>
+
+            {/* Side indicator */}
+            {hasAnyImage && (
+              <p className="mt-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                Viewing: {viewSide} side
+              </p>
+            )}
           </div>
 
           {/* Controls Area */}
@@ -208,8 +246,8 @@ export default function CustomizeClient() {
                     key={color.name}
                     onClick={() => setSelectedColor(color)}
                     className={`w-8 h-8 rounded-full border border-gray-200 transition-all ${selectedColor.name === color.name
-                        ? 'ring-2 ring-offset-2 ring-primary scale-110'
-                        : 'hover:scale-110'
+                      ? 'ring-2 ring-offset-2 ring-primary scale-110'
+                      : 'hover:scale-110'
                       }`}
                     style={{ backgroundColor: color.hex }}
                     title={color.name}
@@ -230,8 +268,8 @@ export default function CustomizeClient() {
                     key={size}
                     onClick={() => setSelectedSize(size)}
                     className={`w-11 h-9 rounded-lg text-xs font-bold transition-all ${selectedSize === size
-                        ? 'bg-black text-white'
-                        : 'bg-white border border-gray-200 text-gray-500 hover:border-black hover:text-black'
+                      ? 'bg-black text-white'
+                      : 'bg-white border border-gray-200 text-gray-500 hover:border-black hover:text-black'
                       }`}
                   >
                     {size}
@@ -240,83 +278,39 @@ export default function CustomizeClient() {
               </div>
             </div>
 
-            {/* 3. Add Custom Text */}
+            {/* 3. Upload Front Image */}
             <div>
               <h3 className="text-sm font-bold text-black mb-4 flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-black text-white text-[9px] flex items-center justify-center shrink-0 font-mono">03</span>
-                CUSTOM TEXT
-              </h3>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Type something..."
-                  value={customText}
-                  onChange={(e) => setCustomText(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-1 focus:ring-black text-sm text-black placeholder:text-gray-400"
-                />
-
-                <div className="flex flex-wrap gap-3 items-center">
-                  <div className="flex gap-1.5">
-                    {['#000000', '#ffffff', '#E63946', '#3b82f6', '#10b981'].map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setTextColor(c)}
-                        className={`w-6 h-6 rounded-full border border-gray-200 transition-transform ${textColor === c ? 'scale-125 ring-1 ring-black' : 'hover:scale-110'}`}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                  <div className="h-4 w-[1px] bg-gray-200 mx-1 hidden sm:block" />
-                  <div className="flex gap-1.5 flex-wrap">
-                    {FONTS.map((f) => (
-                      <button
-                        key={f.name}
-                        onClick={() => setSelectedFont(f)}
-                        className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-tighter transition-all ${selectedFont.name === f.name ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 hover:text-black'}`}
-                      >
-                        {f.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 4. Upload Design */}
-            <div>
-              <h3 className="text-sm font-bold text-black mb-4 flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-black text-white text-[9px] flex items-center justify-center shrink-0 font-mono">04</span>
-                UPLOAD GRAPHIC
+                FRONT DESIGN
               </h3>
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className={`border border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${previewImage
-                    ? 'border-green-500 bg-green-50/30'
-                    : 'border-gray-200 hover:border-black hover:bg-gray-50'
+                onClick={() => frontInputRef.current?.click()}
+                className={`border border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${frontPreview
+                  ? 'border-green-500 bg-green-50/30'
+                  : 'border-gray-200 hover:border-black hover:bg-gray-50'
                   }`}
               >
                 <input
                   type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
+                  ref={frontInputRef}
+                  onChange={handleFrontFileChange}
                   accept="image/png"
                   className="hidden"
                 />
 
-                {isUploading ? (
+                {isUploadingFront ? (
                   <div className="flex flex-col items-center py-2">
                     <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin mb-2"></div>
                     <p className="text-[10px] font-bold text-gray-500">UPLOADING...</p>
                   </div>
-                ) : previewImage ? (
+                ) : frontPreview ? (
                   <div className="flex items-center justify-center gap-3">
-                    <div className="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
+                      <Image src={frontPreview} alt="Front preview" width={48} height={48} className="object-cover w-full h-full" unoptimized />
                     </div>
                     <div className="text-left">
-                      <p className="text-xs font-bold text-black uppercase tracking-tight">Image Ready</p>
+                      <p className="text-xs font-bold text-black uppercase tracking-tight">Front Image Ready</p>
                       <p className="text-[10px] text-gray-400 underline">Change Image</p>
                     </div>
                   </div>
@@ -327,73 +321,78 @@ export default function CustomizeClient() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
                     </div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Upload PNG</p>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Upload Front PNG</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 5. Adjust Graphic */}
-            {previewImage && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-sm font-bold text-black mb-4 flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-black text-white text-[9px] flex items-center justify-center shrink-0 font-mono">05</span>
-                  ADJUST GRAPHIC
-                </h3>
-                <div className="space-y-4 bg-gray-50 p-4 rounded-xl">
-                  {/* Zoom Control */}
-                  <div>
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-gray-500 mb-1">
-                      <span>Zoom</span>
-                      <span>{Math.round(imgScale * 100)}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="2.0"
-                      step="0.05"
-                      value={imgScale}
-                      onChange={(e) => setImgScale(parseFloat(e.target.value))}
-                      className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-                    />
-                  </div>
+            {/* 4. Upload Back Image */}
+            <div>
+              <h3 className="text-sm font-bold text-black mb-4 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-black text-white text-[9px] flex items-center justify-center shrink-0 font-mono">04</span>
+                BACK DESIGN
+              </h3>
+              <div
+                onClick={() => backInputRef.current?.click()}
+                className={`border border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${backPreview
+                  ? 'border-green-500 bg-green-50/30'
+                  : 'border-gray-200 hover:border-black hover:bg-gray-50'
+                  }`}
+              >
+                <input
+                  type="file"
+                  ref={backInputRef}
+                  onChange={handleBackFileChange}
+                  accept="image/png"
+                  className="hidden"
+                />
 
-                  {/* Horizontal Position */}
-                  <div>
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-gray-500 mb-1">
-                      <span>Horizontal</span>
-                      <span>{imgPos.x}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      step="1"
-                      value={imgPos.x}
-                      onChange={(e) => setImgPos(prev => ({ ...prev, x: parseInt(e.target.value) }))}
-                      className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-                    />
+                {isUploadingBack ? (
+                  <div className="flex flex-col items-center py-2">
+                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p className="text-[10px] font-bold text-gray-500">UPLOADING...</p>
                   </div>
-
-                  {/* Vertical Position */}
-                  <div>
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-gray-500 mb-1">
-                      <span>Vertical</span>
-                      <span>{imgPos.y}px</span>
+                ) : backPreview ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
+                      <Image src={backPreview} alt="Back preview" width={48} height={48} className="object-cover w-full h-full" unoptimized />
                     </div>
-                    <input
-                      type="range"
-                      min="-100"
-                      max="100"
-                      step="1"
-                      value={imgPos.y}
-                      onChange={(e) => setImgPos(prev => ({ ...prev, y: parseInt(e.target.value) }))}
-                      className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-                    />
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-black uppercase tracking-tight">Back Image Ready</p>
+                      <p className="text-[10px] text-gray-400 underline">Change Image</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mb-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    </div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Upload Back PNG</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* 5. Design Instructions */}
+            <div>
+              <h3 className="text-sm font-bold text-black mb-4 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-black text-white text-[9px] flex items-center justify-center shrink-0 font-mono">05</span>
+                DESIGN INSTRUCTIONS
+              </h3>
+              <textarea
+                placeholder="Describe how you want your t-shirt to look. Include details like image placement, sizing, any text you want added, special effects, etc."
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-1 focus:ring-black text-sm text-black placeholder:text-gray-400 resize-none"
+              />
+              <p className="text-[10px] text-gray-400 mt-2">
+                The more detail you provide, the better we can create your perfect design!
+              </p>
+            </div>
 
             {/* Action Bar */}
             <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-6">
@@ -406,7 +405,7 @@ export default function CustomizeClient() {
               </div>
               <button
                 onClick={handleAddToCart}
-                disabled={(!previewImage && !customText) || isAddingToCart}
+                disabled={(!frontImageUrl && !backImageUrl) || isAddingToCart}
                 className="w-full sm:w-auto sm:flex-1 sm:max-w-[180px] bg-primary text-white py-3.5 rounded-full text-base font-semibold hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-1 active:translate-y-0"
               >
                 {isAddingToCart ? 'Placing...' : 'Place Order'}
